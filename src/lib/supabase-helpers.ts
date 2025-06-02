@@ -228,43 +228,6 @@ export async function startQuizFirstQuestion(quizId: string, firstQuestionId: st
 }
 
 /**
- * Réinitialise les réponses des participants pour un quiz
- */
-export async function resetParticipantAnswers(quizId: string) {
-  try {
-    console.log('Resetting participant answers for quiz:', quizId);
-    
-    if (!quizId) {
-      console.error('Invalid quiz ID for resetParticipantAnswers:', quizId);
-      return { 
-        success: false, 
-        error: { message: 'ID de quiz invalide ou manquant' } 
-      };
-    }
-    
-    // Supprime toutes les réponses des participants pour ce quiz
-    const { error } = await supabase
-      .from('participant_answers')
-      .delete()
-      .eq('quiz_id', quizId);
-    
-    if (error) {
-      console.error('Error deleting participant answers:', error);
-      return { success: false, error };
-    }
-    
-    console.log('Successfully reset participant answers for quiz:', quizId);
-    return { success: true };
-  } catch (error) {
-    console.error('Error in resetParticipantAnswers:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error : { message: 'Erreur inconnue' }
-    };
-  }
-}
-
-/**
  * Met à jour la question active pour un quiz avec gestion avancée des erreurs
  */
 export async function updateActiveQuestion(

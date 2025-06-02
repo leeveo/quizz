@@ -314,7 +314,8 @@ export default function EditQuizPage() {
     }
   }
 
-  const joinUrl = generateJoinUrl(quizId);
+  // Fix the null check issue with generateJoinUrl
+  const joinUrl = generateJoinUrl(quizId || ''); // Use empty string as fallback for null
 
   // Fetch themes and questions data
   const fetchThemesAndQuestions = async () => {

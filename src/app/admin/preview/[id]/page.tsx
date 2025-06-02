@@ -16,8 +16,10 @@ import {
 type Participant = {
   id: string
   name: string
-  avatar_emoji: string
+  avatar_emoji?: string
+  avatar?: string
   connected_at: string
+  quiz_id?: string
 }
 
 type QuestionResponse = {
@@ -422,7 +424,7 @@ export default function QuizPreviewPage() {
         console.log('Participants data received:', data);
         
         // Process participants to ensure avatar_emoji exists
-        const processedData = data?.map(p => ({
+        const processedData = data?.map((p: any) => ({
           ...p,
           avatar_emoji: p.avatar_emoji || p.avatar || '👤' // Use fallbacks if needed
         })) || [];
@@ -457,12 +459,12 @@ export default function QuizPreviewPage() {
           // Filter locally for the current quiz if needed
           // or just use all participants as a last resort
           let relevantParticipants = allParticipants;
-          if (quizId && allParticipants.some(p => p.quiz_id)) {
-            relevantParticipants = allParticipants.filter(p => p.quiz_id === quizId);
+          if (quizId && allParticipants.some((p: any) => p.quiz_id)) {
+            relevantParticipants = allParticipants.filter((p: any) => p.quiz_id === quizId);
           }
           
           // Process participants to ensure avatar_emoji exists
-          const processedData = relevantParticipants?.map(p => ({
+          const processedData = relevantParticipants?.map((p: any) => ({
             ...p,
             avatar_emoji: p.avatar_emoji || p.avatar || '👤' // Use fallbacks if needed
           })) || [];
@@ -502,8 +504,16 @@ export default function QuizPreviewPage() {
         // Process responses even if participants data is missing
         const formattedResponses: ParticipantResponse[] = data.map(item => ({
           participant_id: item.participant_id,
-          participant_name: item.participants?.name || 'Anonyme',
-          avatar_emoji: item.participants?.avatar_emoji || '👤',
+          participant_name: item.participants ? 
+            (Array.isArray(item.participants) 
+              ? (item.participants[0]?.name ?? 'Anonyme') 
+              : ((item.participants as any)?.name ?? 'Anonyme')) 
+            : 'Anonyme',
+          avatar_emoji: item.participants ? 
+            (Array.isArray(item.participants) 
+              ? (item.participants[0]?.avatar_emoji ?? '👤') 
+              : ((item.participants as any)?.avatar_emoji ?? '👤')) 
+            : '👤',
           selected_option: item.selected_option,
           answered_at: item.answered_at
         }));
@@ -821,13 +831,14 @@ export default function QuizPreviewPage() {
         console.error('Error starting quiz:', result.error);
         
         // Check for the specific constraint violation error
-        if (result.error && result.error.code === '23505') {
+        if (result.error && typeof result.error === 'object' && 'code' in result.error && result.error.code === '23505') {
           // This is just a duplicate key - the quiz may already be started
           // We can safely continue despite this error
           console.log('Quiz may already be started. Continuing...');
         } else {
           alert('Erreur lors du démarrage du quiz: ' + 
-            (result.error?.message || 'Veuillez réessayer.'));
+            (result.error && typeof result.error === 'object' && 'message' in result.error ? 
+              result.error.message : 'Veuillez réessayer.'));
           return;
         }
       }

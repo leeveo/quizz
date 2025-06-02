@@ -5,6 +5,8 @@ import { FiGrid, FiPlusCircle, FiBarChart2 } from 'react-icons/fi'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { createQuiz } from '../actions'
+// Add missing imports for helper functions
+import { launchQuiz, resetParticipantAnswers } from '@/lib/supabase-helpers'
 // import SupabaseDebug from '@/components/SupabaseDebug'
 
 // Define navItems outside the component to ensure it's always available
@@ -21,6 +23,8 @@ type Quiz = {
   event_name?: string
   event_date?: string
   created_by: string | null
+  active?: boolean
+  questions?: any[] // Add this property to fix the error
 }
 
 type Theme = {

@@ -362,9 +362,14 @@ export default function PlayQuizPage() {
           console.log('Active question change:', payload);
           
           // Make sure this is for the current question
-          if (currentQuestion && payload.new.question_id === currentQuestion.id) {
+          if (currentQuestion && payload.new && typeof payload.new === 'object' && 'question_id' in payload.new && payload.new.question_id === currentQuestion.id) {
             setActiveQuestion(payload.new as ActiveQuestion);
-            updateTimerForStage(payload.new.stage || 'question');
+            updateTimerForStage(
+              payload.new && 
+              typeof payload.new === 'object' && 
+              'stage' in payload.new ? 
+              payload.new.stage || 'question' : 'question'
+            );
           }
         }
       )

@@ -159,7 +159,7 @@ export default function SupabaseTest() {
                 
                 if (hasDescription) {
                   // Si oui, on ajoute la description
-                  themeData['description'] = 'Questions sur la musique, artistes, chansons et instruments'
+                  (themeData as any)['description'] = 'Questions sur la musique, artistes, chansons et instruments'
                 }
                 
                 const { data, error } = await supabase.from('themes').insert(themeData).select().single()

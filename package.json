@@ -6,6 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "preview": "npm run build && next start",
+    "check": "tsc --noEmit && eslint . --ext .ts,.tsx",
+    "predeploy": "npm run check && npm run preview",
     "lint": "next lint"
   },
   "dependencies": {

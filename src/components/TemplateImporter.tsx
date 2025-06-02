@@ -75,6 +75,33 @@ export default function TemplateImporter({ onImport }: { onImport?: () => void }
     setLoading(false)
   }
 
+  // Add the missing importTemplate function
+  const importTemplate = async (tpl: any) => {
+    setLoading(true);
+    try {
+      // Create a new quiz based on the template
+      const { data, error } = await supabase.from('quizzes').insert({
+        title: tpl.title,
+        theme: tpl.theme,
+        event_name: tpl.event_name || 'Event based on template',
+        event_date: new Date().toISOString().split('T')[0], // Today's date
+        created_by: null
+      }).select().single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        alert(`Template "${tpl.title}" imported successfully!`);
+        if (onImport) onImport();
+      }
+    } catch (err: any) {
+      console.error('Error importing template:', err);
+      alert(`Error importing template: ${err.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchTemplates()
     fetchThemesAndQuestions()

@@ -11,6 +11,7 @@ type Quiz = {
   event_name?: string
   event_date?: string
   created_by: string | null
+  active?: boolean // Add this property
 }
 
 export default function DashboardPage() {

@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 /**
- * Utilitaire pour effectuer une opération Supabase avec plusieurs tentatives
+ * Utility to perform a Supabase operation with multiple attempts
  */
 export async function trySupabaseOperation<T>(
   operation: () => Promise<{ data: T | null; error: any }>,
@@ -9,15 +9,15 @@ export async function trySupabaseOperation<T>(
   options = { retries: 1, logErrors: true }
 ): Promise<{ data: T | null; error: any }> {
   try {
-    // Première tentative
+    // First attempt
     const result = await operation();
     
-    // Si succès, retourner immédiatement
+    // If successful, return immediately
     if (!result.error) {
       return result;
     }
     
-    // Si erreur et qu'on a une opération de secours
+    // If error and we have a fallback operation
     if (fallbackOperation) {
       if (options.logErrors) {
         console.warn('First operation failed, trying fallback:', result.error);
@@ -25,13 +25,13 @@ export async function trySupabaseOperation<T>(
       return await fallbackOperation();
     }
     
-    // Si erreur et qu'on a des tentatives restantes
+    // If error and we have retries left
     if (options.retries > 0) {
       if (options.logErrors) {
         console.warn(`Operation failed, retrying (${options.retries} attempts left):`, result.error);
       }
       
-      // Attendre 500ms avant de réessayer
+      // Wait 500ms before retrying
       await new Promise(resolve => setTimeout(resolve, 500));
       
       return trySupabaseOperation(
@@ -41,7 +41,7 @@ export async function trySupabaseOperation<T>(
       );
     }
     
-    // Si toutes les tentatives ont échoué
+    // If all attempts failed
     return result;
   } catch (e) {
     if (options.logErrors) {
@@ -52,13 +52,13 @@ export async function trySupabaseOperation<T>(
 }
 
 /**
- * Récupère tous les détails d'un quiz avec ses questions de manière robuste
+ * Fetch a quiz with its questions in a robust way
  */
 export async function fetchQuizWithQuestions(quizId: string) {
   console.log('Fetching quiz with questions, ID:', quizId);
   
   try {
-    // Essayer d'abord la méthode normale avec la relation explicite
+    // Try first with explicit relationship
     try {
       console.log('Method 1: Using explicit relationship');
       const { data, error } = await supabase
@@ -77,7 +77,7 @@ export async function fetchQuizWithQuestions(quizId: string) {
     } catch (error) {
       console.log('Trying fallback method...');
       
-      // Méthode de secours: deux requêtes distinctes
+      // Fallback: two separate queries
       const { data: quizData, error: quizError } = await supabase
         .from('quizzes')
         .select('*')
@@ -96,10 +96,10 @@ export async function fetchQuizWithQuestions(quizId: string) {
       
       if (questionsError) {
         console.log('Questions fetch failed:', questionsError);
-        // On peut continuer même si on n'a pas les questions
+        // We can continue even without questions
       }
       
-      // Combiner les résultats
+      // Combine results
       const result = {
         ...quizData,
         questions: questionsData || []
@@ -140,7 +140,7 @@ export async function checkQuizLaunched(quizId: string) {
 /**
  * Lance un quiz en le marquant comme actif
  */
-export async function launchQuiz(quizId: number | string) {
+export async function activateQuiz(quizId: number | string) {
   try {
     // Convertir en chaîne si c'est un nombre
     const id = String(quizId);
@@ -151,7 +151,6 @@ export async function launchQuiz(quizId: number | string) {
       .update({
         active: true,
         launched_at: new Date().toISOString()
-        // Ne pas utiliser launch_id car il n'existe pas dans le schéma
       })
       .eq('id', id);
       
@@ -162,7 +161,7 @@ export async function launchQuiz(quizId: number | string) {
     
     return { success: true, error: null };
   } catch (err) {
-    console.error('Exception in launchQuiz:', err);
+    console.error('Exception in activateQuiz:', err);
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -228,6 +227,43 @@ export async function startQuizFirstQuestion(quizId: string, firstQuestionId: st
 }
 
 /**
+ * Resets participant answers for a quiz
+ */
+export async function clearParticipantAnswers(quizId: string) {
+  try {
+    console.log('Resetting participant answers for quiz:', quizId);
+    
+    if (!quizId) {
+      console.error('Invalid quiz ID for clearParticipantAnswers:', quizId);
+      return { 
+        success: false, 
+        error: { message: 'Missing or invalid quiz ID' } 
+      };
+    }
+    
+    // Delete all participant answers for this quiz
+    const { error } = await supabase
+      .from('participant_answers')
+      .delete()
+      .eq('quiz_id', quizId);
+    
+    if (error) {
+      console.error('Error deleting participant answers:', error);
+      return { success: false, error };
+    }
+    
+    console.log('Successfully reset participant answers for quiz:', quizId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error in clearParticipantAnswers:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error : { message: 'Unknown error' }
+    };
+  }
+}
+
+/**
  * Met à jour la question active pour un quiz avec gestion avancée des erreurs
  */
 export async function updateActiveQuestion(
@@ -235,7 +271,7 @@ export async function updateActiveQuestion(
   questionId: string, 
   showResults: boolean, 
   correctOption: number,
-  stage: string = 'question' // Nouveau paramètre pour l'étape
+  stage: string = 'question'
 ) {
   try {
     console.log('Updating active question:', {
@@ -317,81 +353,15 @@ export async function updateActiveQuestion(
 }
 
 /**
- * Launches a quiz by updating its active state
+ * Update the active question in a quiz (simpler version)
  */
-export const launchQuiz = async (quizId: number | string) => {
-  try {
-    const { error } = await supabase
-      .from('quizzes')
-      .update({
-        active: true,
-        launched_at: new Date().toISOString()
-      })
-      .eq('id', quizId);
-    
-    if (error) {
-      console.error('Error launching quiz:', error);
-      return { success: false, error: error.message };
-    }
-    
-    return { success: true, error: null };
-  } catch (err: any) {
-    console.error('Exception in launchQuiz:', err);
-    return { success: false, error: err.message || 'Unknown error' };
-  }
-};
-
-/**
- * Resets participant answers for a specific quiz
- */
-export const resetParticipantAnswers = async (quizId: string) => {
-  try {
-    // First, get all questions for this quiz
-    const { data: questions, error: questionsError } = await supabase
-      .from('questions')
-      .select('id')
-      .eq('quiz_id', quizId);
-      
-    if (questionsError) {
-      console.error('Error fetching questions:', questionsError);
-      return { success: false, error: questionsError.message };
-    }
-    
-    if (!questions || questions.length === 0) {
-      return { success: true, message: 'No questions found for this quiz' };
-    }
-    
-    // Get all question IDs
-    const questionIds = questions.map(q => q.id);
-    
-    // Delete all answers for these questions
-    const { error: deleteError } = await supabase
-      .from('participant_answers')
-      .delete()
-      .in('question_id', questionIds);
-      
-    if (deleteError) {
-      console.error('Error deleting participant answers:', deleteError);
-      return { success: false, error: deleteError.message };
-    }
-    
-    return { success: true, error: null };
-  } catch (err: any) {
-    console.error('Exception in resetParticipantAnswers:', err);
-    return { success: false, error: err.message || 'Unknown error' };
-  }
-};
-
-/**
- * Updates the active question in a quiz
- */
-export const updateActiveQuestionHelper = async (
+export async function updateActiveQuestionHelper(
   quizId: string,
   questionId: string,
   showResults: boolean,
   correctOption?: number,
   stage?: string
-) => {
+) {
   try {
     // Update active_question table
     const activeQuestionUpsert = await supabase
@@ -424,4 +394,10 @@ export const updateActiveQuestionHelper = async (
       error: err
     };
   }
-};
+}
+
+// Define launchQuiz as an alias to activateQuiz for backward compatibility
+export const launchQuiz = activateQuiz;
+
+// Define resetParticipantAnswers as an alias to clearParticipantAnswers for backward compatibility
+export const resetParticipantAnswers = clearParticipantAnswers;

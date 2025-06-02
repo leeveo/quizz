@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans, 'Inter', Arial, Helvetica, sans-serif);
+  --font-mono: var(--font-geist-mono, 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +22,342 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+.btn-primary {
+  @apply bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition;
+}
+.btn-secondary {
+  @apply bg-purple-100 hover:bg-purple-200 text-purple-800 px-4 py-2 rounded-md transition;
+}
+
+/* Styles pour le mode prévisualisation */
+.fullscreen-quiz {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.timer-bar {
+  height: 6px;
+  background-color: rgba(79, 70, 229, 0.2);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.timer-progress {
+  height: 100%;
+  background-color: rgb(79, 70, 229);
+  transition: width 1s linear;
+}
+
+/* Styles pour le mode prévisualisation */
+.quiz-preview-fullscreen {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.quiz-preview-timer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.3);
+  width: 100%;
+}
+
+.quiz-preview-timer-bar {
+  height: 100%;
+  background-color: white;
+  transition: width 1s linear;
+}
+
+.quiz-preview-question {
+  background-color: white;
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+/* Animation for notification */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
+/* Participant cloud animation for subtle movement */
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(3px, -3px) scale(1.05); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+.participant-cloud > div {
+  animation: float 3s ease-in-out infinite;
+  animation-delay: calc(var(--index, 0) * 0.5s);
+}
+
+.participant-cloud > div:nth-child(2n) {
+  animation-duration: 4s;
+}
+
+.participant-cloud > div:nth-child(3n) {
+  animation-duration: 5s;
+  animation-direction: reverse;
+}
+
+.participant-cloud > div:hover {
+  animation-play-state: paused;
+}
+
+/* Mobile responsive helpers */
+@media (max-width: 768px) {
+  .btn-primary, .btn-secondary {
+    @apply py-2.5 px-4 text-sm;
+  }
+  
+  h1 {
+    @apply text-2xl;
+  }
+  
+  h2 {
+    @apply text-xl;
+  }
+  
+  .mobile-full {
+    width: 100% !important;
+  }
+  
+  .mobile-py {
+    @apply py-3;
+  }
+  
+  .mobile-px {
+    @apply px-4;
+  }
+}
+
+/* Touch-friendly elements for mobile */
+@media (max-width: 768px) {
+  button, 
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    @apply min-h-[44px] min-w-[44px]; /* Ensure touch targets are at least 44x44px */
+  }
+  
+  input, select, textarea {
+    @apply text-base; /* Prevent zoom on focus in iOS */
+  }
+}
+
+/* Responsive scrollbar for mobile */
+@media (max-width: 768px) {
+  .scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .scroll-y {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Improved fullscreen mode styles to properly hide the sidebar */
+.fullscreen-mode {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  overflow: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+}
+
+/* When in fullscreen mode, hide the sidebar */
+body:has(.fullscreen-mode) aside,
+html.quiz-fullscreen aside {
+  display: none !important;
+}
+
+/* Ensure fullscreen content is above everything else */
+body:has(.fullscreen-mode) .fullscreen-mode,
+html.quiz-fullscreen .fullscreen-mode {
+  z-index: 10001 !important;
+}
+
+/* Also force the sidebar to be hidden when in fullscreen mode */
+.fullscreen-active aside {
+  display: none !important;
+}
+
+/* Fullscreen button that's always visible */
+.fullscreen-button {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10000;
+  background-color: var(--quiz-primary-color, #4f46e5); /* Use custom color with fallback */
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.fullscreen-button:hover {
+  transform: scale(1.1);
+  background-color: #4338ca;
+}
+
+/* Fix fullscreen mode for all screens including participant waiting */
+html.quiz-fullscreen body > * {
+  display: none !important;
+}
+
+html.quiz-fullscreen body > #__next > * {
+  display: none !important;
+}
+
+html.quiz-fullscreen body > #__next > .fullscreen-mode,
+html.quiz-fullscreen .fullscreen-mode {
+  display: flex !important;
+  z-index: 10001 !important;
+}
+
+/* Completely revised fullscreen mode handling */
+.quiz-fullscreen-mode #quiz-preview-container,
+.quiz-fullscreen-mode #__next,
+.quiz-fullscreen-mode body {
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* FIXED: Make fullscreen styles more specific to avoid affecting the entire site */
+/* Only hide sidebar when a specific class is present */
+html.quiz-fullscreen-mode aside,
+html.quiz-fullscreen-mode header,
+html.quiz-fullscreen-mode nav.sidebar-nav,
+html.quiz-fullscreen-mode footer {
+  display: none !important;
+}
+
+/* Remove overly broad selectors that hide all sidebars */
+.quiz-fullscreen-mode #quiz-preview-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9999 !important;
+  background-image: linear-gradient(to bottom right, #4f46e5, #9333ea) !important;
+}
+
+/* Reset these problematic selectors that were hiding all sidebars */
+body:has(.fullscreen-mode) aside,
+html.quiz-fullscreen aside,
+.fullscreen-active aside {
+  /* Remove the !important display:none that was affecting all sidebars */
+  display: initial; /* Reset to default */
+}
+
+/* Only hide the sidebar when fullscreen mode is specifically active */
+body:has(.fullscreen-active) aside,
+html.quiz-fullscreen-active aside {
+  display: none !important;
+}
+
+/* Make sure the fullscreen button stays visible */
+.fullscreen-button {
+  position: fixed !important;
+  top: 16px !important;
+  right: 16px !important;
+  z-index: 10000 !important;
+  background-color: var(--quiz-primary-color, #4f46e5); /* Use custom color with fallback */
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.fullscreen-button:hover {
+  transform: scale(1.1);
+  background-color: #4338ca;
+}
+
+/* Make details summary more accessible/interactive */
+details summary {
+  list-style: none;
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Add subtle animation for details expansion */
+details[open] summary + div {
+  animation: slideDown 0.3s ease-in-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Rotate icon animation */
+details summary svg {
+  transition: transform 0.3s ease;
+}
+
+details[open] summary svg {
+  transform: rotate(180deg);
 }

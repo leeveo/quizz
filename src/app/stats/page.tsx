@@ -57,8 +57,8 @@ export default function StatsPage() {
   const [quizStats, setQuizStats] = useState<QuizStats | null>(null)
   const [participantStats, setParticipantStats] = useState<ParticipantStat[]>([])
   const [questionStats, /* unused setter removed */] = useState<QuestionStat[]>([])
-  const [expandedParticipants, /* unused setter removed */] = useState<{ [key: string]: boolean }>({})
-  const [expandedQuestions, /* unused setter removed */] = useState<{ [key: string]: boolean }>({})
+  const [expandedParticipants, setExpandedParticipants] = useState<{ [key: string]: boolean }>({})
+  const [expandedQuestions, setExpandedQuestions] = useState<{ [key: string]: boolean }>({})
   const [activeTab, setActiveTab] = useState<'overview' | 'participants' | 'questions'>('overview')
 
   // Wrap fetchQuizDetails in useCallback and define it before useEffect

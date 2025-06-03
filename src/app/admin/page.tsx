@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { FiGrid, FiPlusCircle, FiBarChart2 } from 'react-icons/fi'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -56,7 +56,7 @@ type ThemeQuestion = {
 
 // Remove unused SupabaseError type
 
-export default function AdminPage() {
+function AdminPageContent() {
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') as 'dashboard' | 'create' | 'stats' || 'dashboard'
   const initialQuizId = searchParams.get('quizId') ? Number(searchParams.get('quizId')) : null
@@ -1092,5 +1092,13 @@ export default function AdminPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <AdminPageContent />
+    </Suspense>
   );
 }

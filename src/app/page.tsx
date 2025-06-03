@@ -1,6 +1,4 @@
-import { Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function Home() {
   return (
@@ -17,7 +15,7 @@ export default function Home() {
             </div>
             <h2 className="text-xl font-semibold mb-3">Participer à un quiz</h2>
             <p className="text-gray-600 mb-6">
-              Rejoignez un quiz en cours avec le code d'accès ou scannez un QR
+              Rejoignez un quiz en cours avec le code d&apos;accès ou scannez un QR
               code.
             </p>
             <Link href="/participant">
@@ -39,7 +37,7 @@ export default function Home() {
             </p>
             <Link href="/dashboard">
               <button className="w-full bg-purple-600 text-white rounded-lg py-3 px-4 font-medium hover:bg-purple-700 transition">
-                Panneau d'administration
+                Panneau d&apos;administration
               </button>
             </Link>
           </div>

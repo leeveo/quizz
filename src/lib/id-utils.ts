@@ -13,7 +13,7 @@ export function isValidUuid(id: string): boolean {
 /**
  * Extracts a valid ID from the Next.js params object
  */
-export function extractId(params: any): string | null {
+export function extractId(params: { id?: string | string[] | undefined }): string | null {
   const rawId = params.id;
   return typeof rawId === 'string' ? rawId : Array.isArray(rawId) ? rawId[0] : null;
 }

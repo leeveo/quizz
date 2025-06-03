@@ -3,10 +3,25 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+// Define proper types for the component
+interface Theme {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface TableResult {
+  exists: boolean;
+  count: number;
+  error: string | null;
+}
+
+type TableStatus = Record<string, TableResult>;
+
 export default function SupabaseTest() {
   const [error, setError] = useState<string | null>(null)
-  const [themes, setThemes] = useState<any[]>([])
-  const [tableStatus, setTableStatus] = useState<any>({})
+  const [themes, setThemes] = useState<Theme[]>([])
+  const [tableStatus, setTableStatus] = useState<TableStatus>({})
   const [loading, setLoading] = useState(true)
 
   // Test the connection by loading available tables
@@ -17,7 +32,7 @@ export default function SupabaseTest() {
       
       // Test specific tables existence and count
       const tables = ['themes', 'theme_questions', 'quizzes', 'questions', 'participants', 'answers']
-      const tableResults: Record<string, any> = {}
+      const tableResults: Record<string, TableResult> = {}
       
       for (const table of tables) {
         try {
@@ -30,11 +45,11 @@ export default function SupabaseTest() {
             count: count || 0,
             error: error ? error.message : null
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           tableResults[table] = {
             exists: false,
             count: 0,
-            error: e.message
+            error: e instanceof Error ? e.message : 'Unknown error'
           }
         }
       }
@@ -57,12 +72,13 @@ export default function SupabaseTest() {
         try {
           const { data: columnsData } = await supabase.rpc('get_columns_info', { table_name: 'themes' })
           console.log('Themes table structure:', columnsData || 'RPC not available')
-        } catch (e) {
-          console.log('Could not fetch columns info')
+        } catch (error) {
+          // Log the error to acknowledge it's caught
+          console.log('Could not fetch columns info:', error)
         }
       }
-    } catch (err: any) {
-      setError(`Unexpected error: ${err.message}`)
+    } catch (err: unknown) {
+      setError(`Unexpected error: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
     }
@@ -97,7 +113,7 @@ export default function SupabaseTest() {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(tableStatus).map(([table, status]: [string, any]) => (
+              {Object.entries(tableStatus).map(([table, status]: [string, TableResult]) => (
                 <tr key={table}>
                   <td className="py-2 px-4 border-b font-medium">{table}</td>
                   <td className="py-2 px-4 border-b">
@@ -149,8 +165,14 @@ export default function SupabaseTest() {
           onClick={async () => {
             if (!themes.length) {
               try {
+                // Create a proper theme data type
+                interface ThemeData {
+                  name: string;
+                  description?: string;
+                }
+                
                 // Créer un thème de test - sans utiliser description si la colonne n'existe pas
-                const themeData = {
+                const themeData: ThemeData = {
                   name: 'Musique'
                 }
                 
@@ -159,10 +181,10 @@ export default function SupabaseTest() {
                 
                 if (hasDescription) {
                   // Si oui, on ajoute la description
-                  (themeData as any)['description'] = 'Questions sur la musique, artistes, chansons et instruments'
+                  themeData.description = 'Questions sur la musique, artistes, chansons et instruments'
                 }
                 
-                const { data, error } = await supabase.from('themes').insert(themeData).select().single()
+                const { error } = await supabase.from('themes').insert(themeData).select().single()
                 
                 if (error) {
                   alert(`Erreur lors de la création du thème: ${error.message}`)
@@ -170,8 +192,8 @@ export default function SupabaseTest() {
                   alert('Thème de test créé avec succès !')
                   testConnection()
                 }
-              } catch (e: any) {
-                alert(`Erreur: ${e.message}`)
+              } catch (e: unknown) {
+                alert(`Erreur: ${e instanceof Error ? e.message : 'Erreur inconnue'}`)
               }
             } else {
               alert('Des thèmes existent déjà dans la base de données.')

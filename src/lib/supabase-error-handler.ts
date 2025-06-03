@@ -5,13 +5,13 @@
 type FetchOptions = {
   method?: string;
   headers?: Record<string, string>;
-  body?: any;
+  body?: unknown; // Changed from any to unknown for better type safety
 };
 
 /**
  * Journaliser une erreur Supabase avec des détails supplémentaires
  */
-export function logSupabaseError(context: string, error: any): void {
+export function logSupabaseError(context: string, error: unknown): void {
   console.error(`❌ Supabase error in ${context}:`, error);
   
   // Vérifier les détails de connexion
@@ -19,7 +19,7 @@ export function logSupabaseError(context: string, error: any): void {
   console.log('Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   
   // Vérifier si c'est un objet d'erreur vide (souvent lié à des problèmes de connexion)
-  if (error && Object.keys(error).length === 0) {
+  if (error && typeof error === 'object' && Object.keys(error).length === 0) {
     console.error('Empty error object detected. This may indicate a connection issue with Supabase.');
   }
 }
@@ -99,10 +99,10 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; erro
       success: response.ok,
       error: !response.ok ? `Status: ${response.status}` : undefined
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { 
       success: false, 
-      error: error.message 
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }

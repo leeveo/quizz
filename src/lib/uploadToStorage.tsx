@@ -5,7 +5,7 @@ export async function uploadImage(file: File): Promise<string | null> {
   const fileName = `${Date.now()}.${fileExt}`
   const filePath = `images/${fileName}`
 
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('quiz-images')
     .upload(filePath, file, {
       cacheControl: '3600',

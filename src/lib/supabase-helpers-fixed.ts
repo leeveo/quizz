@@ -19,9 +19,12 @@ export const launchQuiz = async (quizId: number | string) => {
     }
     
     return { success: true, error: null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Exception in launchQuiz:', err);
-    return { success: false, error: err.message || 'Unknown error' };
+    return { 
+      success: false, 
+      error: err instanceof Error ? err.message : 'Unknown error' 
+    };
   }
 };
 
@@ -60,9 +63,12 @@ export const resetParticipantAnswers = async (quizId: string) => {
     }
     
     return { success: true, error: null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Exception in resetParticipantAnswers:', err);
-    return { success: false, error: err.message || 'Unknown error' };
+    return { 
+      success: false, 
+      error: err instanceof Error ? err.message : 'Unknown error' 
+    };
   }
 };
 

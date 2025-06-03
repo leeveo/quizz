@@ -37,8 +37,8 @@ export default function CreateProject() {
       setTheme('')
       setEventName('')
       setEventDate('')
-    } catch (error: any) {
-      setMessage({type: 'error', text: error.message})
+    } catch (error: unknown) {
+      setMessage({type: 'error', text: error instanceof Error ? error.message : 'Erreur inconnue'})
     } finally {
       setLoading(false)
     }
@@ -78,7 +78,7 @@ export default function CreateProject() {
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l'événement</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l&apos;événement</label>
           <input
             type="text"
             className="w-full border border-gray-300 rounded p-2"
@@ -89,7 +89,7 @@ export default function CreateProject() {
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date de l'événement</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Date de l&apos;événement</label>
           <input
             type="date"
             className="w-full border border-gray-300 rounded p-2"

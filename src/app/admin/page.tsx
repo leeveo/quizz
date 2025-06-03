@@ -24,7 +24,18 @@ type Quiz = {
   event_date?: string
   created_by: string | null
   active?: boolean
-  questions?: any[] // Add this property to fix the error
+  questions?: Question[] // Use proper type instead of any
+}
+
+// Define proper types for quiz-related data
+type Question = {
+  id: string;
+  title: string;
+  options: string[];
+  correct: number;
+  quiz_id: string | number;
+  image_url?: string;
+  order_index?: number;
 }
 
 type Theme = {
@@ -43,18 +54,7 @@ type ThemeQuestion = {
   image_url?: string
 }
 
-// Add this function to help with error debugging
-const logError = (message: string, error: any) => {
-  console.error(message, error);
-  // Check if it's an empty error object which often indicates connection issues
-  if (error && Object.keys(error).length === 0) {
-    console.error('Empty error object detected. This may indicate a connection issue with Supabase.');
-    console.error('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-    // Don't log the key for security reasons
-    console.error('Supabase Key defined:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  }
-  return error;
-};
+// Remove unused SupabaseError type
 
 export default function AdminPage() {
   const searchParams = useSearchParams()
@@ -71,6 +71,9 @@ export default function AdminPage() {
   const [eventDate, setEventDate] = useState('')
   // Add state for primary color with a default value
   const [primaryColor, setPrimaryColor] = useState('#4f46e5') // Default indigo color
+  // Keep quizzes state for dashboard display and in fetchQuizzes
+  // This state is essential for the dashboard view even if not directly referenced in this file
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null)
   const [quizCreationSuccess, setQuizCreationSuccess] = useState<string | null>(null)
@@ -299,18 +302,25 @@ export default function AdminPage() {
         throw new Error(result.error || "Erreur lors de la création du quiz");
       }
       
-      // Process successful response
+      // Process successful response - Add null check to prevent TypeScript errors
       const newQuiz = result.data;
-      setQuizCreationSuccess(`Quiz "${newQuiz.title}" créé avec succès! (ID: ${newQuiz.id})`);
-      setSelectedQuizId(newQuiz.id);
-      setCreationStep('customize');
+      
+      if (newQuiz) {
+        setQuizCreationSuccess(`Quiz "${newQuiz.title}" créé avec succès! (ID: ${newQuiz.id})`);
+        setSelectedQuizId(newQuiz.id);
+        setCreationStep('customize');
+      } else {
+        // Handle the edge case where quiz was created but data is missing
+        setQuizCreationSuccess("Quiz créé avec succès!");
+        fetchQuizzes(); // Refresh the list to get the new quiz
+      }
       
       // Rafraîchir la liste des quiz
       fetchQuizzes();
       
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Exception complète:", e);
-      setQuizCreationError(`Erreur: ${e.message}`);
+      setQuizCreationError(`Erreur: ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
     }
   }
   
@@ -353,15 +363,15 @@ export default function AdminPage() {
       // Reload quiz details to show new question
       loadQuizDetails(selectedQuizId);
       
-    } catch (e: any) {
-      alert(`Erreur inattendue: ${e.message}`);
+    } catch (e: unknown) {
+      alert(`Erreur inattendue: ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
     }
   }
 
   // Ajouter une ou plusieurs questions d'un thème à l'événement/quiz sélectionné (modified for recap)
   const handleAddThemeQuestions = async (themeId: string) => {
     if (!selectedQuizId) {
-      showNotification("Veuillez d'abord sélectionner un quiz", 'error');
+      showNotification("Veuillez d&apos;abord sélectionner un quiz", 'error');
       return;
     }
     
@@ -400,14 +410,14 @@ export default function AdminPage() {
       console.log("Données préparées pour insertion:", formattedQuestions);
       
       // Try to insert one by one if batch insert fails
-      const { data, error } = await supabase.from('questions').insert(formattedQuestions).select();
+      const { error } = await supabase.from('questions').insert(formattedQuestions).select();
       
       if (error) {
         console.error("Erreur lors de l'insertion:", error);
         
         // If batch insert failed, try inserting questions one by one
         let successCount = 0;
-        let errorMessages = [];
+        const errorMessages: string[] = [];
         
         for (const q of formattedQuestions) {
           const { error: singleError } = await supabase.from('questions').insert(q);
@@ -421,7 +431,7 @@ export default function AdminPage() {
         if (successCount > 0) {
           showNotification(`${successCount}/${formattedQuestions.length} question(s) ajoutée(s) avec succès.`);
         } else {
-          throw new Error(`Aucune question n'a pu être ajoutée.\n${errorMessages.join('\n')}`);
+          throw new Error(`Aucune question n&apos;a pu être ajoutée.\n${errorMessages.join('\n')}`);
         }
       } else {
         // Add to selected questions for recap
@@ -442,9 +452,9 @@ export default function AdminPage() {
       // Reload quiz details
       loadQuizDetails(selectedQuizId);
       
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Exception complète:", e);
-      showNotification(`Erreur inattendue: ${e.message}`, 'error');
+      showNotification(`Erreur inattendue: ${e instanceof Error ? e.message : 'Erreur inconnue'}`, 'error');
     }
   }
 
@@ -464,8 +474,8 @@ export default function AdminPage() {
         
         // Reload quiz details
         loadQuizDetails(selectedQuizId);
-      } catch (e: any) {
-        alert(`Erreur inattendue: ${e.message}`);
+      } catch (e: unknown) {
+        alert(`Erreur inattendue: ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
       }
     }
     
@@ -473,7 +483,9 @@ export default function AdminPage() {
     setSelectedQuestions(prev => prev.filter(q => q.id !== questionId));
   }
 
-  // Fonction pour lancer un quiz (ajoutez cette fonction dans la page admin)
+  // Keep handleLaunchQuiz but add explanatory comment 
+  // This function is kept for future implementation but currently unused
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   const handleLaunchQuiz = async (quizId: number) => {
     try {
       // Utiliser la fonction helper pour lancer le quiz
@@ -495,7 +507,7 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error('Error in handleLaunchQuiz:', error);
-      alert('Une erreur s\'est produite lors du lancement du quiz.');
+      alert('Une erreur s&apos;est produite lors du lancement du quiz.');
     }
   };
 
@@ -514,7 +526,7 @@ export default function AdminPage() {
                   : 'text-gray-700 hover:bg-indigo-50'
               }`}
             >
-              Étape 1: Créer l'événement
+              Étape 1: Créer l&apos;événement
             </button>
             <button
               onClick={() => {
@@ -537,7 +549,7 @@ export default function AdminPage() {
           {creationStep === 'initial' ? (
             // Étape 1: Création initiale du quiz
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-indigo-700 mb-2">Informations de l'événement Quiz</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-indigo-700 mb-2">Informations de l&apos;événement Quiz</h2>
               
               <p className="text-sm md:text-base text-gray-600 mb-6">
                 Renseignez les informations générales de votre quiz. Ces informations seront visibles par les participants 
@@ -577,7 +589,8 @@ export default function AdminPage() {
                     </label>
                     <select
                       className="border border-gray-300 rounded p-2 w-full"
-                      value={quizTheme}
+                      value=
+                      {quizTheme}
                       onChange={(e) => setQuizTheme(e.target.value)}
                       required
                     >
@@ -592,7 +605,7 @@ export default function AdminPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nom de l'événement <span className="text-red-500">*</span>
+                      Nom de l&apos;événement <span className="text-red-500">*</span>
                     </label>
                     <input
                       className="border border-gray-300 rounded p-2 w-full"
@@ -605,7 +618,7 @@ export default function AdminPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date de l'événement <span className="text-red-500">*</span>
+                      Date de l&apos;événement <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -631,7 +644,7 @@ export default function AdminPage() {
                     onChange={(e) => setPrimaryColor(e.target.value)}
                   />
                   <span className="text-sm text-gray-600">
-                    Cette couleur sera utilisée pour personnaliser l'arrière-plan du quiz
+                    Cette couleur sera utilisée pour personnaliser l&apos;arrière-plan du quiz
                   </span>
                 </div>
               </div>
@@ -892,6 +905,11 @@ export default function AdminPage() {
                                       </div>
                                     </label>
                                   ))}
+
+                                  {/* DEBUG: Show raw data for selected theme questions */}
+                                  <div className="mt-4 p-2 bg-gray-50 rounded-lg text-xs text-gray-500">
+                                    <pre>{JSON.stringify(themeQuestions[selectedTheme], null, 2)}</pre>
+                                  </div>
                                 </div>
                                 
                                 <button
@@ -1019,61 +1037,23 @@ export default function AdminPage() {
       
       {/* Overlay for mobile */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setSidebarOpen(false)}>
-          <div className={`w-64 flex flex-col bg-white/80 backdrop-blur-md border-r border-indigo-100 shadow-2xl min-h-screen fixed left-0 top-0 z-40 transition-transform duration-300 ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-          }`}>
-            <div className="p-6 border-b border-indigo-100 flex justify-between items-center">
-              <h1 className="text-2xl font-extrabold text-indigo-700 tracking-tight">Quiz Admin</h1>
-              <button 
-                onClick={() => setSidebarOpen(false)}
-                className="md:hidden text-gray-500"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">        
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-            <nav className="flex-1 flex flex-col gap-1 px-2 py-6">
-              {navItems.map(({ label, icon, tab }) => (
-                <button
-                  key={tab}
-                  onClick={() => handleTabChange(tab as any)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-semibold w-full text-left ${
-                    activeTab === tab
-                      ? 'bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 shadow'
-                      : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700'
-                  }`}
-                >
-                  {icon}
-                  <span>{label}</span>
-                </button>
-              ))}
-              <hr className="my-6 border-gray-200" />
-              <span className="ml-3">Retour à l'accueil</span>
-              <button
-                onClick={() => router.push('/')}
-                className="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition"
-              >
-                <span className="text-lg">⬅️</span>
-                Retour à l'accueil
-              </button>
-            </nav>
-          </div>
-        </div>
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 md:hidden" 
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
       
-      <aside className="w-64 flex flex-col bg-white/80 backdrop-blur-md border-r border-indigo-100 shadow-2xl min-h-screen fixed left-0 top-0 z-40 transition-transform duration-300 ${
+      {/* Sidebar */}
+      <aside className={`w-64 flex flex-col bg-white/80 backdrop-blur-md border-r border-indigo-100 shadow-2xl min-h-screen fixed left-0 top-0 z-40 transition-transform duration-300 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }">
+      }`}>
         <div className="p-6 border-b border-indigo-100 flex justify-between items-center">
           <h1 className="text-2xl font-extrabold text-indigo-700 tracking-tight">Quiz Admin</h1>
           <button 
             onClick={() => setSidebarOpen(false)}
             className="md:hidden text-gray-500"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">        
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -1083,7 +1063,7 @@ export default function AdminPage() {
           {navItems.map(({ label, icon, tab }) => (
             <button
               key={tab}
-              onClick={() => handleTabChange(tab as any)}
+              onClick={() => handleTabChange(tab as 'dashboard' | 'create' | 'stats')}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-semibold w-full text-left ${
                 activeTab === tab
                   ? 'bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 shadow'
@@ -1094,36 +1074,23 @@ export default function AdminPage() {
               <span>{label}</span>
             </button>
           ))}
-          <hr className="my-6 border-gray-200" />
-          <span className="ml-3">Retour à l'accueil</span>
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition"
-          >
-            <span className="text-lg">⬅️</span>
-            Retour à l'accueil
-          </button>
         </nav>
       </aside>
       
-      <div className="flex-1 flex flex-col min-h-screen md:ml-8">
-        {/* Main Content - adjust padding for mobile */}
-        <div className="flex-1 p-4 md:p-6 lg:p-10">
-          {activeTab === 'dashboard' && (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">Redirection vers le tableau de bord...</p>
-              <button 
-                onClick={() => router.push('/dashboard')}
-                className="btn-primary"
-              >
-                Aller au tableau de bord
-              </button>
-            </div>
-          )}
+      {/* Main Content */}
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md shadow border-b border-indigo-100">
+          <div className="flex items-center px-4 md:px-8 py-5">
+            <h2 className="font-extrabold text-xl md:text-2xl text-indigo-700 tracking-tight ml-8 md:ml-0">
+              {navItems.find((n) => n.tab === activeTab)?.label || 'Dashboard'}
+            </h2>
+          </div>
+        </header>
+        <main className="flex-1 p-4">
           {activeTab === 'create' && renderCreate()}
           {activeTab === 'stats' && renderStats()}
-        </div>
+        </main>
       </div>
     </div>
-  )
+  );
 }

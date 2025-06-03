@@ -43,7 +43,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex md:w-64 flex-col bg-white/80 backdrop-blur-md border-r border-indigo-100 shadow-2xl min-h-screen fixed left-0 top-0 z-20">
         <div className="p-6 border-b border-indigo-100">
           <h1 className="text-2xl font-extrabold text-indigo-700 tracking-tight">Quiz Admin</h1>
-          <p className="text-xs text-gray-500 mt-1">Panel d'administration</p>
+          <p className="text-xs text-gray-500 mt-1">Panel Administration</p>
         </div>
         <nav className="flex-1 flex flex-col gap-1 px-2 py-6">
           {navItems.map(({ label, icon, tab, path }) => (
@@ -74,7 +74,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             className="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition"
           >
             <span className="text-lg">⬅️</span>
-            <span className="ml-3">Retour à l'accueil</span>
+            <span className="ml-3">Retour Accueil</span>
           </button>
         </nav>
       </aside>

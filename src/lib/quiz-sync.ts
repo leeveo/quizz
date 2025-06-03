@@ -117,10 +117,10 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         activeQuestion: activeQuestionData || null, 
         isLoading: false 
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching active question:', error);
       set({ 
-        error: error.message || 'Une erreur est survenue', 
+        error: error instanceof Error ? error.message : 'Une erreur est survenue', 
         isLoading: false 
       });
     }

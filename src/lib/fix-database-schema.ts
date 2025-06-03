@@ -1,11 +1,18 @@
 import { supabase } from './supabase';
 
+// Define more specific types to replace 'any'
+type SchemaFixResult = {
+  success: boolean;
+  error?: unknown;
+  columnResults?: Record<string, boolean>;
+};
+
 // Fix all database schemas without using exec_sql
 export async function fixAllDatabaseSchemas() {
   console.log('Starting database schema checks...');
   
   // Track results for each operation
-  const results: Record<string, any> = {};
+  const results: Record<string, SchemaFixResult> = {};
   
   try {
     // Check and fix participants table
@@ -27,7 +34,7 @@ export async function fixAllDatabaseSchemas() {
 }
 
 // Helper function to fix participants table
-async function fixParticipantsTable() {
+async function fixParticipantsTable(): Promise<SchemaFixResult> {
   try {
     // Check if table exists
     const { error: tableError } = await supabase
@@ -56,7 +63,7 @@ async function fixParticipantsTable() {
         if (error && error.message && error.message.includes(`column "${column}" does not exist`)) {
           try {
             const tempId = `temp-${Date.now()}-${column}`;
-            const insertData: Record<string, any> = {
+            const insertData: Record<string, string | Date> = {
               id: tempId,
               name: 'Temporary User',
               quiz_id: '00000000-0000-0000-0000-000000000000'

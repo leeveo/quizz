@@ -8,7 +8,7 @@ export async function checkAndFixDatabase() {
     console.log('Vérification et réparation de la base de données...')
     
     // Vérifier si la table participants existe
-    const { data: participantsTable, error: tableError } = await supabase
+    const { error: tableError } = await supabase
       .from('participants')
       .select('id')
       .limit(1)
@@ -23,9 +23,12 @@ export async function checkAndFixDatabase() {
           .limit(1)
         
         console.log('La colonne quiz_id existe dans la table participants')
-      } catch (columnError: any) {
-        // Si l'erreur est 42703, la colonne n'existe pas
-        if (columnError.code === '42703') {
+      } catch (columnError: unknown) {
+        // Check if the error has the expected structure
+        if (typeof columnError === 'object' && 
+            columnError !== null && 
+            'code' in columnError && 
+            columnError.code === '42703') {
           console.log('La colonne quiz_id n\'existe pas, tentative de création...')
           
           // Exécuter du SQL pour ajouter la colonne

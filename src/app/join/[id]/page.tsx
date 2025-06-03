@@ -1,8 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+
+// Define proper types
+type Quiz = {
+  id: string;
+  title: string;
+  active: boolean;
+  quiz_started: boolean;
+  theme: string;
+  event_name?: string;
+  event_date?: string;
+}
 
 // Avatars disponibles pour les participants
 const AVATARS = [
@@ -25,7 +36,7 @@ export default function JoinQuizPage() {
   const quizId = params.id as string
   const router = useRouter()
   
-  const [quiz, setQuiz] = useState<any>(null)
+  const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -58,7 +69,7 @@ export default function JoinQuizPage() {
           return
         }
         
-        setQuiz(data)
+        setQuiz(data as Quiz)
         
         // Si le quiz est déjà démarré (quiz_started=true) et que l'utilisateur avait déjà rejoint
         const storedParticipantId = localStorage.getItem(`participant_${quizId}`)
@@ -81,7 +92,7 @@ export default function JoinQuizPage() {
           setWaitingForStart(true);
         }
         
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Erreur lors de la récupération du quiz:', err)
         setError("Impossible de charger le quiz")
       } finally {
@@ -198,7 +209,7 @@ export default function JoinQuizPage() {
           
           return;
         }
-      } catch (completeError: any) {
+      } catch (completeError: unknown) {
         console.error('Erreur avec méthode complète:', completeError);
         
         // Si erreur liée aux colonnes manquantes, essayer autrement
@@ -262,11 +273,11 @@ export default function JoinQuizPage() {
       }
       
       // Si on arrive ici, c'est que toutes les méthodes ont échoué
-      throw new Error("Échec de l'inscription. Veuillez rafraîchir la page et réessayer.");
+      throw new Error("Échec de l&apos;inscription. Veuillez rafraîchir la page et réessayer.");
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erreur détaillée lors de la participation au quiz:', err);
-      setError(`Une erreur s'est produite: ${err.message || 'Erreur inconnue'}`);
+      setError(`Une erreur s&apos;est produite: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
     } finally {
       setJoining(false);
     }
@@ -296,7 +307,7 @@ export default function JoinQuizPage() {
             onClick={() => router.push('/')}
             className="w-full bg-indigo-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-indigo-700 transition"
           >
-            Retour à l'accueil
+            Retour Accueil
           </button>
         </div>
       </div>
@@ -311,12 +322,12 @@ export default function JoinQuizPage() {
             <span className="text-3xl">🤔</span>
           </div>
           <h1 className="text-2xl font-bold text-center text-gray-800 mb-4">Quiz introuvable</h1>
-          <p className="text-center text-gray-600 mb-6">Ce quiz n'existe pas ou n'est plus disponible.</p>
+          <p className="text-center text-gray-600 mb-6">Ce quiz est indisponible.</p>
           <button 
             onClick={() => router.push('/')}
             className="w-full bg-indigo-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-indigo-700 transition"
           >
-            Retour à l'accueil
+            Retour Accueil
           </button>
         </div>
       </div>
@@ -337,7 +348,7 @@ export default function JoinQuizPage() {
           </h1>
           
           <p className="text-gray-600 mb-8">
-            En attente du démarrage du quiz par l'organisateur...
+            En attente du démarrage du quiz ...
           </p>
           
           <div className="bg-indigo-50 p-4 rounded-lg">
@@ -358,6 +369,10 @@ export default function JoinQuizPage() {
               <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse"></div>
             </div>
           </div>
+
+          <p className="text-white text-center max-w-md mb-8">
+            Vous avez rejoint le quiz avec succès. Veuillez patienter jusqu&apos;à ce que l&apos;animateur démarre le quiz.
+          </p>
         </div>
       </div>
     );

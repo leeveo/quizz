@@ -85,7 +85,7 @@ export default function StatsLayout({
             className="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition"
           >
             <span className="text-lg">⬅️</span>
-            <span className="ml-3">Retour à l'accueil</span>
+            <span className="ml-3">Retour à l&apos;accueil</span>
           </button>
         </nav>
       </aside>

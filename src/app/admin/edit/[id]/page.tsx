@@ -6,8 +6,36 @@ import { supabase } from '@/lib/supabase'
 import { FiArrowLeft, FiPlay, FiSave, FiEdit, FiEye, FiPlusCircle, FiUsers, FiX, FiFilter, FiPlus, FiCheck, FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import QRCode from 'react-qr-code';
 import { generateJoinUrl } from '@/lib/qrcode';
-import { launchQuiz } from '@/lib/supabase-helpers'
+// Remove unused import
 import { Dialog, Transition } from '@headlessui/react'
+import Image from 'next/image' // Import Image from next/image
+
+// Define proper types for the data
+// Remove unused Quiz interface since we use individual state variables instead
+interface Question {
+  id: string;
+  title: string;
+  options: string[];
+  correct: number;
+  image_url?: string;
+  order_index?: number;
+}
+
+interface Theme {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface ThemeQuestion {
+  id: string;
+  theme_id: string;
+  content: string;
+  options: string[];
+  correct_option: string;
+  image_url?: string;
+  duration?: number; // Add the missing duration property as optional
+}
 
 export default function EditQuizPage() {
   const params = useParams();
@@ -21,7 +49,7 @@ export default function EditQuizPage() {
   console.log('📦 Parsed ID:', quizId);
 
   const [loading, setLoading] = useState(true);
-  const [quiz, setQuiz] = useState<any>(null)
+  // Remove unused quizData state and just use individual fields
   const [title, setTitle] = useState('')
   const [theme, setTheme] = useState('')
   const [eventName, setEventName] = useState('')
@@ -29,14 +57,14 @@ export default function EditQuizPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isQuestionsModalOpen, setIsQuestionsModalOpen] = useState(false)
-  const [themes, setThemes] = useState<any[]>([])
-  const [themeQuestions, setThemeQuestions] = useState<{ [themeId: string]: any[] }>({})
+  const [themes, setThemes] = useState<Theme[]>([])
+  const [themeQuestions, setThemeQuestions] = useState<{ [themeId: string]: ThemeQuestion[] }>({})
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null)
   const [expandedThemeId, setExpandedThemeId] = useState<string | null>(null)
   const [selectedQuestions, setSelectedQuestions] = useState<{ [id: string]: boolean }>({})
   const [addingQuestions, setAddingQuestions] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [questions, setQuestions] = useState<any[]>([])
+  const [questions, setQuestions] = useState<Question[]>([])
 
   // Add state for modals
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false)
@@ -83,7 +111,7 @@ export default function EditQuizPage() {
           }
 
           console.log('✅ Quiz fetched successfully with Supabase client:', data);
-          setQuiz(data);
+          // Remove setQuizData since we're not using quizData
           setTitle(data.title || '');
           setTheme(data.theme || '');
           setEventName(data.event_name || '');
@@ -143,7 +171,6 @@ export default function EditQuizPage() {
           
           const data = jsonData[0];
           console.log('✅ Quiz fetched via REST API:', data);
-          setQuiz(data);
           setTitle(data.title || '');
           setTheme(data.theme || '');
           setEventName(data.event_name || '');
@@ -162,9 +189,9 @@ export default function EditQuizPage() {
           console.error('❌ REST API error:', restError);
           throw restError; // Re-throw to be caught by the outer catch
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('❌ Overall error fetching quiz:', err);
-        setError(`Erreur: ${err.message || 'Une erreur inconnue est survenue'}`);
+        setError(`Erreur: ${err instanceof Error ? err.message : 'Une erreur inconnue est survenue'}`);
         
         // Try one final approach - direct endpoint with specific formatting
         try {
@@ -182,7 +209,7 @@ export default function EditQuizPage() {
             if (Array.isArray(jsonData) && jsonData.length > 0) {
               console.log('✅ Quiz fetched via emergency endpoint:', jsonData[0]);
               setError(null); // Clear error since we recovered
-              setQuiz(jsonData[0]);
+              // Remove setQuizData since we're not using quizData
               setTitle(jsonData[0].title || '');
               setTheme(jsonData[0].theme || '');
               setEventName(jsonData[0].event_name || '');
@@ -288,15 +315,15 @@ export default function EditQuizPage() {
       setLaunchModalMessage('Quiz lancé avec succès! Les participants peuvent maintenant rejoindre.')
       setSuccess('Quiz lancé avec succès! Les participants peuvent maintenant rejoindre.');
       
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ Unexpected error in handleLaunch:', err);
       setLaunchModalStatus('error')
-      setLaunchModalMessage(`Une erreur inattendue est survenue: ${err.message || 'Erreur inconnue'}`)
-      setError(`Une erreur inattendue est survenue: ${err.message || 'Erreur inconnue'}`);
+      setLaunchModalMessage(`Une erreur inattendue est survenue: ${err instanceof Error ? err.message : 'Erreur inconnue'}`)
+      setError(`Une erreur inattendue est survenue: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
     }
   }
 
-  const handleDeleteQuestion = async (questionId: number) => {
+  const handleDeleteQuestion = async (questionId: number | string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette question ?')) return;
     
     const { error } = await supabase
@@ -337,7 +364,7 @@ export default function EditQuizPage() {
       if (qErr) throw qErr;
       
       // Group questions by theme
-      const grouped: { [themeId: string]: any[] } = {};
+      const grouped: { [themeId: string]: ThemeQuestion[] } = {};
       if (questionsData) {
         for (const q of questionsData) {
           if (!grouped[q.theme_id]) grouped[q.theme_id] = [];
@@ -423,7 +450,10 @@ export default function EditQuizPage() {
             .single();
           
           if (!error && data) {
-            setQuiz(data);
+            setTitle(data.title || '');
+            setTheme(data.theme || '');
+            setEventName(data.event_name || '');
+            setEventDate(data.event_date || '');
             setQuestions(data.questions || []);
             console.log('Quiz data refreshed successfully after adding questions');
           } else {
@@ -439,9 +469,9 @@ export default function EditQuizPage() {
         setSuccessMessage(null);
       }, 3000);
       
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding questions:', err);
-      alert(`Erreur: ${err.message || 'Une erreur est survenue'}`);
+      alert(`Erreur: ${err instanceof Error ? err.message : 'Une erreur est survenue'}`);
     } finally {
       setAddingQuestions(false);
     }
@@ -685,7 +715,7 @@ export default function EditQuizPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Nom de l'événement</label>
+                <label className="block text-sm font-medium text-gray-700">Nom de l&apos;événement</label>
                 <input
                   className="w-full border border-gray-300 p-2 rounded mt-1"
                   value={eventName}
@@ -990,10 +1020,13 @@ export default function EditQuizPage() {
                                   <div className="p-3 border-t bg-gray-50">
                                     {question.image_url && (
                                       <div className="mb-3">
-                                        <img 
+                                        {/* Replace img with next/image */}
+                                        <Image 
                                           src={question.image_url} 
                                           alt="Question image" 
-                                          className="max-h-40 rounded border mx-auto"
+                                          width={160}
+                                          height={120}
+                                          className="max-h-40 rounded border mx-auto object-contain"
                                         />
                                       </div>
                                     )}

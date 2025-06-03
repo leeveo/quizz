@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { FiArrowLeft, FiUsers, FiCheckSquare, FiClipboard, FiPieChart, FiBarChart2, FiChevronDown, FiChevronUp } from 'react-icons/fi'
+import { FiBarChart2, FiDownload, FiUsers, FiChevronDown, FiChevronUp } from 'react-icons/fi'
 
 type Quiz = {
   id: number
@@ -291,7 +291,7 @@ export default function StatsPage() {
                     }`}
                     onClick={() => setActiveTab('overview')}
                   >
-                    <FiPieChart className="inline mr-1" /> Vue d'ensemble
+                    <FiBarChart2 className="inline mr-1" /> Vue Globlale
                   </button>
                   <button
                     className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
@@ -307,7 +307,7 @@ export default function StatsPage() {
                     }`}
                     onClick={() => setActiveTab('questions')}
                   >
-                    <FiClipboard className="inline mr-1" /> Questions
+                    <FiDownload className="inline mr-1" /> Questions
                   </button>
                 </div>
               </div>
@@ -317,12 +317,12 @@ export default function StatsPage() {
                 {/* Same content as before for each tab */}
                 {activeTab === 'overview' && (
                   <div>
-                    <h2 className="text-xl font-bold text-indigo-700 mb-4">Vue d'ensemble</h2>
+                    <h2 className="text-xl font-bold text-indigo-700 mb-4">Vue Globale</h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                       <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
                         <div className="flex items-center mb-2">
-                          <FiClipboard className="text-blue-500 mr-2" />
+                          <FiDownload className="text-blue-500 mr-2" />
                           <h3 className="font-semibold text-blue-700">Questions</h3>
                         </div>
                         <p className="text-3xl font-bold text-blue-800">{quizStats.questionCount}</p>
@@ -338,7 +338,7 @@ export default function StatsPage() {
                       
                       <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
                         <div className="flex items-center mb-2">
-                          <FiCheckSquare className="text-purple-500 mr-2" />
+                          <FiDownload className="text-purple-500 mr-2" />
                           <h3 className="font-semibold text-purple-700">Réponses</h3>
                         </div>
                         <p className="text-3xl font-bold text-purple-800">{quizStats.totalAnswers}</p>
@@ -456,7 +456,7 @@ export default function StatsPage() {
                                   </div>
                                 </div>
                               </div>
-                              {expandedParticipants[participant.id] ? <FiChevronUp /> : <FiChevronDown />
+                              {expandedParticipants[participant.id] ? <FiChevronUp size={20} /> : <FiChevronDown size={20} />
                             }</div>
                             
                             {expandedParticipants[participant.id] && (
@@ -558,7 +558,7 @@ export default function StatsPage() {
                                     }</span>
                                   </div>
                                 </div>
-                                {expandedQuestions[question.id] ? <FiChevronUp /> : <FiChevronDown />}
+                                {expandedQuestions[question.id] ? <FiChevronUp size={20} /> : <FiChevronDown size={20} />}
                               </div>
                             </div>
                             

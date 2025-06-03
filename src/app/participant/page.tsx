@@ -10,7 +10,7 @@ export default function ParticipantJoin() {
   const router = useRouter()
 
   const handleJoin = async () => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('participants')
       .insert({ name, avatar })
 

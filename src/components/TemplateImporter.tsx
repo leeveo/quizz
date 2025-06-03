@@ -3,10 +3,34 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+// Define proper types instead of using 'any'
+interface Template {
+  id: string;
+  title: string;
+  theme: string;
+  event_name?: string;
+}
+
+interface Theme {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface ThemeQuestion {
+  id: string;
+  theme_id: string;
+  content: string;
+  options: string[];
+  correct_option: string;
+  image_url?: string;
+  duration?: number;
+}
+
 export default function TemplateImporter({ onImport }: { onImport?: () => void }) {
-  const [templates, setTemplates] = useState<any[]>([])
-  const [themes, setThemes] = useState<any[]>([])
-  const [themeQuestions, setThemeQuestions] = useState<{ [themeId: string]: any[] }>({})
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [themes, setThemes] = useState<Theme[]>([])
+  const [themeQuestions, setThemeQuestions] = useState<{ [themeId: string]: ThemeQuestion[] }>({})
   const [loading, setLoading] = useState(false)
 
   // Fetch quiz templates
@@ -23,7 +47,7 @@ export default function TemplateImporter({ onImport }: { onImport?: () => void }
     // Fetch all questions for all themes
     if (themesData && themesData.length > 0) {
       const { data: questionsData } = await supabase.from('theme_questions').select('*')
-      const grouped: { [themeId: string]: any[] } = {}
+      const grouped: { [themeId: string]: ThemeQuestion[] } = {}
       if (questionsData) {
         for (const q of questionsData) {
           if (!grouped[q.theme_id]) grouped[q.theme_id] = []
@@ -34,7 +58,7 @@ export default function TemplateImporter({ onImport }: { onImport?: () => void }
     }
   }
 
-  const importThemeAsQuiz = async (theme: any) => {
+  const importThemeAsQuiz = async (theme: Theme) => {
     setLoading(true)
     // Crée un quiz à partir du thème
     const quizRes = await supabase.from('quizzes').insert({
@@ -50,13 +74,13 @@ export default function TemplateImporter({ onImport }: { onImport?: () => void }
     }
 
     // Ajoute toutes les questions du thème comme questions du quiz
-    const questions = (themeQuestions[theme.id] || []).map((q: any, idx: number) => ({
+    const questions = (themeQuestions[theme.id] || []).map((q: ThemeQuestion, index: number) => ({
       quiz_id: quizId,
       title: q.content,
       options: q.options,
       correct: q.options.indexOf(q.correct_option),
       image_url: q.image_url,
-      order_index: idx,
+      order_index: index,
       duration: q.duration
     }))
 
@@ -76,7 +100,7 @@ export default function TemplateImporter({ onImport }: { onImport?: () => void }
   }
 
   // Add the missing importTemplate function
-  const importTemplate = async (tpl: any) => {
+  const importTemplate = async (tpl: Template) => {
     setLoading(true);
     try {
       // Create a new quiz based on the template
@@ -94,9 +118,9 @@ export default function TemplateImporter({ onImport }: { onImport?: () => void }
         alert(`Template "${tpl.title}" imported successfully!`);
         if (onImport) onImport();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error importing template:', err);
-      alert(`Error importing template: ${err.message || 'Unknown error'}`);
+      alert(`Error importing template: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -149,7 +173,7 @@ export default function TemplateImporter({ onImport }: { onImport?: () => void }
           </div>
           {(themeQuestions[theme.id] || []).length > 0 && (
             <ul className="mt-4 text-sm text-gray-700 list-disc pl-5">
-              {(themeQuestions[theme.id] || []).slice(0, 5).map((q, idx) => (
+              {(themeQuestions[theme.id] || []).slice(0, 5).map((q) => (
                 <li key={q.id}>
                   <span className="font-medium">{q.content}</span>
                   <span className="ml-2 text-gray-400">({q.options.join(', ')})</span>

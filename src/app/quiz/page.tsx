@@ -3,8 +3,16 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+// Define a proper type for the question
+type Question = {
+  id: string
+  title: string
+  options: string[]
+  correct: number
+}
+
 export default function QuizLive() {
-  const [question, setQuestion] = useState<any>(null)
+  const [question, setQuestion] = useState<Question | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const [timer, setTimer] = useState<number>(20)
 

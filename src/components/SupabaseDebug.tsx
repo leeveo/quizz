@@ -2,13 +2,22 @@
 
 import { useState, useEffect } from 'react'
 
+// Define proper type for test result
+interface TestResult {
+  success: boolean;
+  status?: number;
+  response?: string;
+  error?: string;
+}
+
 export default function SupabaseDebug() {
-  const [testResult, setTestResult] = useState<any>(null)
+  const [testResult, setTestResult] = useState<TestResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [envVars, setEnvVars] = useState({
+  // Create readonly env vars since we don't need to change them
+  const envVars = {
     url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     keyDefined: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  })
+  }
 
   const runConnectionTest = async () => {
     setIsLoading(true)
@@ -86,7 +95,7 @@ export default function SupabaseDebug() {
           <li>Go to Supabase Dashboard</li>
           <li>Navigate to SQL Editor</li>
           <li>Run the SQL script provided to fix the infinite recursion in RLS policy</li>
-          <li>Return to this page and click "Test Connection Again"</li>
+          <li>Return to this page and click &quot;Test Connection Again&quot;</li>
         </ol>
       </div>
     </div>

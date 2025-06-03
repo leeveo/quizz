@@ -2,7 +2,7 @@
  * Utilitaires pour gérer les erreurs avec Supabase
  */
 
-export function logSupabaseError(context: string, error: any): void {
+export function logSupabaseError(context: string, error: unknown): void {
   console.error(`❌ Supabase error in ${context}:`, error)
   
   // Log connection details
@@ -10,7 +10,7 @@ export function logSupabaseError(context: string, error: any): void {
   console.log('Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   
   // Check if it's an empty error object which often indicates connection issues
-  if (error && Object.keys(error).length === 0) {
+  if (error && typeof error === 'object' && Object.keys(error).length === 0) {
     console.error('Empty error object detected. This may indicate a connection issue with Supabase.')
   }
 }

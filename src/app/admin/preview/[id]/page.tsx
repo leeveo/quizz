@@ -516,10 +516,48 @@ export default function QuizPreviewPage() {
     }
   }, [quiz, fetchParticipants]);
 
+  // Fetch response counts for current question - with improved handling for empty responses
+  const fetchResponses = useCallback(async (questionId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('participant_answers')
+        .select('selected_option, question_id')
+        .eq('question_id', questionId);
+        
+      if (error) throw error;
+      
+      // Handle empty data
+      if (!data || data.length === 0) {
+        setResponses([]);
+        return;
+      }
+      
+      // Count responses by option
+      const counts: Record<number, number> = {};
+      for (const response of data) {
+        // Ensure selected_option is a number and valid
+        const option = typeof response.selected_option === 'number' ? response.selected_option : 0;
+        counts[option] = (counts[option] || 0) + 1;
+      }
+      
+      // Convert to array
+      const responseCounts = Object.entries(counts).map(([option, count]) => ({
+        option_index: parseInt(option),
+        count
+      }));
+      
+      setResponses(responseCounts);
+    } catch (err) {
+      console.error('Error fetching responses:', err);
+      // Don't crash - set empty array
+      setResponses([]);
+    }
+  }, []);
+
   // Subscribe to participant answers
   useEffect(() => {
     if (!quizId || !quizStarted || questions.length === 0) return
-    
+
     const answersChannel = supabase
       .channel('answers-channel')
       .on(
@@ -538,7 +576,7 @@ export default function QuizPreviewPage() {
         }
       )
       .subscribe()
-      
+
     return () => {
       supabase.removeChannel(answersChannel)
     }
@@ -627,44 +665,6 @@ export default function QuizPreviewPage() {
       console.error('Error fetching participant responses:', err);
       // Don't crash - set empty array
       setParticipantResponses([]);
-    }
-  }, []);
-
-  // Fetch response counts for current question - with improved handling for empty responses
-  const fetchResponses = useCallback(async (questionId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('participant_answers')
-        .select('selected_option, question_id')
-        .eq('question_id', questionId);
-        
-      if (error) throw error;
-      
-      // Handle empty data
-      if (!data || data.length === 0) {
-        setResponses([]);
-        return;
-      }
-      
-      // Count responses by option
-      const counts: Record<number, number> = {};
-      for (const response of data) {
-        // Ensure selected_option is a number and valid
-        const option = typeof response.selected_option === 'number' ? response.selected_option : 0;
-        counts[option] = (counts[option] || 0) + 1;
-      }
-      
-      // Convert to array
-      const responseCounts = Object.entries(counts).map(([option, count]) => ({
-        option_index: parseInt(option),
-        count
-      }));
-      
-      setResponses(responseCounts);
-    } catch (err) {
-      console.error('Error fetching responses:', err);
-      // Don't crash - set empty array
-      setResponses([]);
     }
   }, []);
 

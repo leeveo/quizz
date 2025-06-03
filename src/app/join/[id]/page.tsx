@@ -211,12 +211,24 @@ export default function JoinQuizPage() {
         }
       } catch (completeError: unknown) {
         console.error('Erreur avec méthode complète:', completeError);
-        
+
         // Si erreur liée aux colonnes manquantes, essayer autrement
-        if (completeError.code === 'PGRST204') {
+        if (
+          typeof completeError === 'object' &&
+          completeError !== null &&
+          'code' in completeError &&
+          (completeError as { code?: string }).code === 'PGRST204'
+        ) {
           console.log('Colonnes inconnues détectées, essai avec champs essentiels');
         } else {
-          console.error('Erreur spécifique:', completeError.message);
+          // Affiche le message d'erreur si disponible
+          const msg =
+            typeof completeError === 'object' &&
+            completeError !== null &&
+            'message' in completeError
+              ? (completeError as { message?: string }).message
+              : String(completeError);
+          console.error('Erreur spécifique:', msg);
         }
       }
       

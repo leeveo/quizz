@@ -104,7 +104,15 @@ export default function StatsPage() {
         .eq('quiz_id', selectedQuizId)
       
       if (answersError) throw answersError
-      
+
+      // Get questions for the selected quiz
+      const { data: questions, error: questionsError } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('quiz_id', selectedQuizId);
+
+      if (questionsError) throw questionsError;
+
       // Calculate participant stats
       const participantStatsData: ParticipantStat[] = participants?.map(p => {
         const participantAnswers = answers?.filter(a => a.participant_id === p.id) || []
@@ -119,7 +127,7 @@ export default function StatsPage() {
           avatar_emoji: p.avatar_emoji || p.avatar || '👤',
           answeredCount: participantAnswers.length,
           correctCount: correctAnswers.length,
-          responseRate: questionCount > 0 ? (participantAnswers.length / questionCount) * 100 : 0
+          responseRate: questions && questions.length > 0 ? (participantAnswers.length / questions.length) * 100 : 0
         }
       }) || []
       
@@ -158,7 +166,7 @@ export default function StatsPage() {
     }
     
     fetchQuizzes()
-  }, [])
+  }, [selectedQuizId])
 
   // Fetch stats for the selected quiz
   useEffect(() => {
@@ -191,6 +199,22 @@ export default function StatsPage() {
   const formatPercentage = (value: number) => {
     return `${Math.round(value)}%`
   }
+
+  // Add missing toggleParticipantExpand function
+  const toggleParticipantExpand = (participantId: string) => {
+    setExpandedParticipants(prev => ({
+      ...prev,
+      [participantId]: !prev[participantId]
+    }));
+  };
+
+  // Add missing toggleQuestionExpand function (for completeness, if used)
+  const toggleQuestionExpand = (questionId: string) => {
+    setExpandedQuestions(prev => ({
+      ...prev,
+      [questionId]: !prev[questionId]
+    }));
+  };
 
   if (loading && quizzes.length === 0) {
     return (

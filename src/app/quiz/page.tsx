@@ -20,7 +20,8 @@ export default function QuizLive() {
     const channel = supabase
       .channel('quiz-questions')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'questions' }, (payload) => {
-        setQuestion(payload.new)
+        // Cast payload.new to Question type to satisfy TypeScript
+        setQuestion(payload.new as Question)
         setTimer(20)
         setSelected(null)
       })
@@ -40,6 +41,7 @@ export default function QuizLive() {
 
   const sendAnswer = async (choice: number) => {
     setSelected(choice)
+    if (!question) return // Prevent error if question is null
     await supabase.from('answers').insert({
       participant_id: 1, // à remplacer dynamiquement
       question_id: question.id,

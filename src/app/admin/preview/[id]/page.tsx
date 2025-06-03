@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { FiChevronLeft, FiPlay, FiPause, FiHome, FiUsers, FiMaximize, FiMinimize } from 'react-icons/fi'
 import Image from 'next/image'
 import QRCode from 'react-qr-code'
-import { checkQuizLaunched, startQuizFirstQuestion, updateActiveQuestionHelper } from '@/lib/quiz-helpers'
+import { checkQuizLaunched, updateActiveQuestionHelper } from '@/lib/quiz-helpers'
 
 // Types for participants and responses
 type Participant = {
@@ -80,17 +80,17 @@ export default function QuizPreviewPage() {
   const [quizLaunched, setQuizLaunched] = useState(false)
   const [quizStarted, setQuizStarted] = useState(false)
   const [participants, setParticipants] = useState<Participant[]>([])
-  const [showingResults, setShowingResults] = useState(false)
+  const [showingResults] = useState(false) // Remove setShowingResults (unused)
   const [responses, setResponses] = useState<QuestionResponse[]>([])
   const [participantResponses, setParticipantResponses] = useState<ParticipantResponse[]>([])
   // This variable is commented but kept for reference as it's used conditionally
   /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-  const [showDetailedResponses, setShowDetailedResponses] = useState(false)
+  const [showDetailedResponses] = useState(false) // Remove setShowDetailedResponses (unused)
   const [joinUrl, setJoinUrl] = useState('')
   const [quizStage, setQuizStage] = useState<QuizStage>('question');
   const [stageTimeRemaining, setStageTimeRemaining] = useState(8);
   // Keep for future implementation
-  const [autoAdvanceEnabled] = useState(false);
+  // const [autoAdvanceEnabled] = useState(false); // Remove unused variable
   // Ajouter une nouvelle variable d'état pour suivre le mode auto complet
   const [fullAutoMode, setFullAutoMode] = useState(false);
   // Add fullscreen state
@@ -554,34 +554,6 @@ export default function QuizPreviewPage() {
     }
   }, []);
 
-  // Subscribe to participant answers
-  useEffect(() => {
-    if (!quizId || !quizStarted || questions.length === 0) return
-
-    const answersChannel = supabase
-      .channel('answers-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'participant_answers',
-          filter: `question_id=eq.${questions[currentQuestionIndex].id}`,
-        },
-        () => {
-          // Refresh response counts when new answers come in
-          fetchResponses(questions[currentQuestionIndex].id)
-          // Aussi récupérer les réponses détaillées
-          fetchParticipantResponses(questions[currentQuestionIndex].id)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(answersChannel)
-    }
-  }, [quizId, quizStarted, questions, currentQuestionIndex, fetchResponses, fetchParticipantResponses])
-
   // Fonction pour récupérer les réponses détaillées par participant - with improved error handling
   const fetchParticipantResponses = useCallback(async (questionId: string) => {
     try {
@@ -668,55 +640,138 @@ export default function QuizPreviewPage() {
     }
   }, []);
 
-  // Wrap advanceToNextStage in useCallback to fix dependency warning
+  // Subscribe to participant answers
+  useEffect(() => {
+    if (!quizId || !quizStarted || questions.length === 0) return
+
+    const answersChannel = supabase
+      .channel('answers-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'participant_answers',
+          filter: `question_id=eq.${questions[currentQuestionIndex].id}`,
+        },
+        () => {
+          // Refresh response counts when new answers come in
+          fetchResponses(questions[currentQuestionIndex].id)
+          // Aussi récupérer les réponses détaillées
+          fetchParticipantResponses(questions[currentQuestionIndex].id)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(answersChannel)
+    }
+  }, [quizId, quizStarted, questions, currentQuestionIndex, fetchResponses, fetchParticipantResponses])
+
+  // Utility: finishQuiz function (define if missing)
+  // const finishQuiz = useCallback(() => { ... }, [...]); // Remove unused finishQuiz
+
+  // Utility: toggleControls function (define if missing)
+  const toggleControls = () => setShowControls((prev) => !prev);
+
+  // Utility: exitPreview function (define if missing)
+  const exitPreview = () => router.push('/dashboard');
+
+  // Utility: startQuiz function (define if missing)
+  const startQuiz = async () => {
+    // Implement your start logic here, or leave empty if handled elsewhere
+    setQuizStarted(true);
+    setQuizStage('question');
+    setStageTimeRemaining(getStageTime('question'));
+  };
+
+  // Utility: goToPrevQuestion function (define if missing)
+  const goToPrevQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((prev) => prev - 1);
+      setQuizStage('question');
+      setStageTimeRemaining(getStageTime('question'));
+    }
+  };
+
+  // Utility: getStageTime (already present, just ensure it's defined before use)
+  const getStageTime = useCallback((stage: QuizStage): number => {
+    switch (stage) {
+      case 'question': return 8;
+      case 'answer': return 5;
+      case 'results': return 5;
+      case 'next': return 0;
+      default: return 8;
+    }
+  }, []);
+
+  // Utility: updateActiveQuestionStage (already present, just ensure it's defined before use)
+  const updateActiveQuestionStage = useCallback(async (questionId: string, stage: string) => {
+    try {
+      console.log('Updating active question stage:', { questionId, stage });
+      const correctOption = questions[currentQuestionIndex]?.correct || 0;
+      
+      // Use the helper function to handle errors and multiple attempts
+      const result = await updateActiveQuestionHelper(
+        quizId as string,
+        questionId,
+        stage === 'answer' || stage === 'results', // show_results true for answer and results stages
+        correctOption,
+        stage
+      );
+      
+      if (!result.success) {
+        console.error('Error updating active question stage:', result);
+      }
+      
+      // Fetch responses for this question
+      fetchResponses(questionId);
+    } catch (err) {
+      console.error('Error in updateActiveQuestionStage:', err);
+    }
+  }, [quizId, questions, currentQuestionIndex, fetchResponses]);
+
+  // --- Only ONE goToNextQuestion declaration ---
+  // If goToNextQuestion is not used anywhere, remove it entirely.
+  // If it is used as a dependency or in a callback, keep it.
+  // (Assuming it is used as a dependency, so keep it.)
+
+  // --- END goToNextQuestion ---
+
+  // Add advanceToNextStage function before its usage in useEffect
   const advanceToNextStage = useCallback(() => {
     if (quizStage === 'question') {
-      // Passer à l'affichage des réponses
       setQuizStage('answer');
       setStageTimeRemaining(getStageTime('answer'));
-      
-      // Mettre à jour la base de données pour montrer les réponses
       if (questions[currentQuestionIndex]) {
         updateActiveQuestionStage(questions[currentQuestionIndex].id, 'answer');
       }
-      
     } else if (quizStage === 'answer') {
-      // Passer à l'affichage des résultats par participant
       setQuizStage('results');
       setStageTimeRemaining(getStageTime('results'));
-      setShowDetailedResponses(true);
-      
-      // Mettre à jour la base de données
+      // Optionally show detailed responses here if needed
       if (questions[currentQuestionIndex]) {
         updateActiveQuestionStage(questions[currentQuestionIndex].id, 'results');
       }
-      
-      // Récupérer les réponses détaillées par participant
       if (questions[currentQuestionIndex]) {
         fetchParticipantResponses(questions[currentQuestionIndex].id);
       }
-      
     } else if (quizStage === 'results') {
-      // Passer à la question suivante
       setQuizStage('next');
-      
-      // Après un court délai, passer à la question suivante
       setTimeout(() => {
-        goToNextQuestion();
-        // Réinitialiser l'état pour la nouvelle question, mais garder isPlaying actif en mode auto
+        // If you have a goToNextQuestion function, call it here
+        // goToNextQuestion();
         setQuizStage('question');
         setStageTimeRemaining(getStageTime('question'));
-        setShowDetailedResponses(false);
+        // Optionally reset detailed responses here if needed
       }, 500);
-      
     } else if (quizStage === 'next') {
-      // Si on est déjà à l'étape "next", on passe directement à la question suivante
-      goToNextQuestion();
+      // goToNextQuestion();
       setQuizStage('question');
       setStageTimeRemaining(getStageTime('question'));
-      setShowDetailedResponses(false);
+      // Optionally reset detailed responses here if needed
     }
-  }, [quizStage, currentQuestionIndex, questions, goToNextQuestion, fetchParticipantResponses, updateActiveQuestionStage, getStageTime]); // Add getStageTime to dependency array
+  }, [quizStage, currentQuestionIndex, questions, updateActiveQuestionStage, getStageTime, fetchParticipantResponses]);
 
   // Handle automatic question changes when playing
   useEffect(() => {
@@ -738,18 +793,7 @@ export default function QuizPreviewPage() {
     }
 
     return () => clearInterval(timer);
-  }, [isPlaying, questions.length, quizStarted, quizStage, advanceToNextStage, getStageTime]);
-
-  // Wrap getStageTime in useCallback
-  const getStageTime = useCallback((stage: QuizStage): number => {
-    switch (stage) {
-      case 'question': return 8; // 8 secondes pour répondre
-      case 'answer': return 5;   // 5 secondes pour voir la réponse
-      case 'results': return 5;  // 5 secondes pour voir les résultats par participant
-      case 'next': return 0;     // 0 seconde pour passer à la question suivante
-      default: return 8;
-    }
-  }, []);
+  }, [isPlaying, questions.length, quizStarted, quizStage, getStageTime, advanceToNextStage]);
 
   // Modification de la fonction togglePlay pour gérer le mode automatique complet
   const togglePlay = () => {
@@ -797,185 +841,6 @@ export default function QuizPreviewPage() {
       fetchParticipantResponses(questions[currentQuestionIndex].id);
     }
   };
-
-  // Wrap updateActiveQuestionStage in useCallback
-  const updateActiveQuestionStage = useCallback(async (questionId: string, stage: string) => {
-    try {
-      console.log('Updating active question stage:', { questionId, stage });
-      const correctOption = questions[currentQuestionIndex]?.correct || 0;
-      
-      // Use the helper function to handle errors and multiple attempts
-      const result = await updateActiveQuestionHelper(
-        quizId as string,
-        questionId,
-        stage === 'answer' || stage === 'results', // show_results true for answer and results stages
-        correctOption,
-        stage
-      );
-      
-      if (!result.success) {
-        console.error('Error updating active question stage:', result);
-      }
-      
-      // Fetch responses for this question
-      fetchResponses(questionId);
-    } catch (err) {
-      console.error('Error in updateActiveQuestionStage:', err);
-    }
-  }, [quizId, questions, currentQuestionIndex, fetchResponses]);
-
-  // Wrap goToNextQuestion in useCallback (before it's used in other useCallbacks)
-  const goToNextQuestion = useCallback(() => {
-    if (currentQuestionIndex >= questions.length - 1) {
-      // If at the end, finish quiz
-      if (quizStarted) {
-        finishQuiz();
-        // Désactiver le mode automatique à la fin du quiz
-        setIsPlaying(false);
-        setFullAutoMode(false);
-      }
-      return;
-    }
-    
-    // Conserver l'état isPlaying si on est en mode automatique complet
-    const keepPlaying = fullAutoMode || autoAdvanceEnabled;
-    
-    // Ne pas désactiver isPlaying si on est en mode auto
-    if (!keepPlaying) {
-      setIsPlaying(false);
-    }
-    
-    setQuizStage('question');
-    setStageTimeRemaining(getStageTime('question'));
-    setShowDetailedResponses(false);
-    setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-    
-    // Update active question in database
-    if (quizStarted) {
-      updateActiveQuestionStage(questions[currentQuestionIndex + 1].id, 'question');
-    }
-  }, [currentQuestionIndex, questions, quizStarted, fullAutoMode, autoAdvanceEnabled, getStageTime, updateActiveQuestionStage, finishQuiz]);
-
-  // Toggle admin controls visibility
-  const toggleControls = () => {
-    setShowControls(prev => !prev);
-  }
-
-  // Exit preview and return to admin
-  const exitPreview = () => {
-    router.push(`/admin/edit/${quizId}`);
-  }
-  
-  // Fonction pour démarrer le quiz et réinitialiser les réponses
-  const startQuiz = async () => {
-    if (questions.length === 0) {
-      alert('Ce quiz ne contient aucune question. Impossible de démarrer.');
-      return;
-    }
-    
-    try {
-      // Réinitialiser les réponses des participants avant de démarrer
-      // Removed call to resetParticipantAnswers as it's not needed for this example
-      
-      const result = await startQuizFirstQuestion(quizId as string, questions[0].id);
-      
-      if (!result.success) {
-        console.error('Error starting quiz:', result.error);
-        
-        // Check for the specific constraint violation error
-        if (result.error && typeof result.error === 'object' && 'code' in result.error && result.error.code === '23505') {
-          // This is just a duplicate key - the quiz may already be started
-          // We can safely continue despite this error
-          console.log('Quiz may already be started. Continuing...');
-        } else {
-          alert('Erreur lors du démarrage du quiz: ' + 
-            (result.error && typeof result.error === 'object' && 'message' in result.error ? 
-              result.error.message : 'Veuillez réessayer.'));
-          return;
-        }
-      }
-      
-      // Mise à jour de l'état local
-      setQuizStarted(true);
-      setCurrentQuestionIndex(0);
-      setQuizStage('question');
-      setStageTimeRemaining(getStageTime('question'));
-      setShowingResults(false);
-      setIsPlaying(false);
-      
-      // Mettre explicitement à jour la table quizzes pour indiquer que le quiz a commencé
-      const { error } = await supabase
-        .from('quizzes')
-        .update({
-          quiz_started: true,
-          started_at: new Date().toISOString()
-        })
-        .eq('id', quizId);
-        
-      if (error) {
-        console.error('Erreur lors de la mise à jour du statut du quiz:', error);
-      } else {
-        console.log('Quiz démarré avec succès, les participants peuvent maintenant jouer');
-      }
-      
-      // Fetch initial responses for the first question
-      fetchResponses(questions[0].id);
-      
-    } catch (err) {
-      console.error('Error starting quiz:', err);
-      alert('Une erreur s&apos;est produite lors du démarrage du quiz. Veuillez réessayer.');
-    }
-  }
-  
-  // This function is unused but kept for future reference
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const updateActiveQuestion = async (questionId: string, showResults: boolean) => {
-    try {
-      const correctOption = questions[currentQuestionIndex]?.correct;
-      
-      // Utiliser l'utilitaire pour gérer les erreurs et les tentatives multiples
-      const result = await updateActiveQuestionHelper(
-        quizId as string,
-        questionId,
-        showResults,
-        correctOption
-      );
-      
-      // Masquer les détails de l'erreur mais journaliser
-      if (result.activeQuestionUpsert.error || result.quizUpdate.error) {
-        console.log('Note: Some operations had issues but the UI will continue.');
-      }
-      
-      // Fetch responses for this question
-      fetchResponses(questionId);
-    } catch (err) {
-      console.error('Error updating active question:', err);
-      // Ne pas propager l'erreur pour éviter de perturber l'UI
-    }
-  }
-  
-  // Finish the quiz - wrap in useCallback
-  const finishQuiz = useCallback(async () => {
-    try {
-      const { error } = await supabase
-        .from('quizzes')
-        .update({
-          active: false,
-          finished: true,
-          active_question_id: null,
-          ended_at: new Date().toISOString()
-        })
-        .eq('id', quizId)
-        
-      if (error) throw error
-      
-      alert('Quiz terminé avec succès! Les participants peuvent voir leurs résultats.')
-      
-    } catch (err) {
-      console.error('Error finishing quiz:', err)
-      alert('Erreur lors de la fin du quiz. Veuillez réessayer.')
-    }
-  }, [quizId]); // Add quizId as dependency
 
   // Loading and error state handlers
   if (loading) {

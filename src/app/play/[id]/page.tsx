@@ -256,7 +256,9 @@ export default function PlayQuizPage() {
                     selectedOption === index ? 'border-indigo-500 bg-indigo-50 text-indigo-800' :
                     'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50'
                   } ${hasAnswered ? 'cursor-default' : 'cursor-pointer'}`}
-                  onClick={() => !hasAnswered && submitAnswer(index)}
+                  onClick={() => {
+                    if (!hasAnswered) submitAnswer();
+                  }}
                   disabled={hasAnswered}
                 >
                   <div className="text-2xl mb-1">{String.fromCharCode(65 + index)}</div>

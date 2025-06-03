@@ -489,7 +489,7 @@ export default function AdminPage() {
   const handleLaunchQuiz = async (quizId: number) => {
     try {
       // Utiliser la fonction helper pour lancer le quiz
-      const { error, success } = await launchQuiz(quizId);
+      const { error, success } = await launchQuiz(quizId.toString()); // Convert to string
       
       if (!success) {
         alert(`Erreur lors du lancement du quiz: ${error}`);

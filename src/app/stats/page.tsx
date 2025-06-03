@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { FiBarChart2, FiDownload, FiUsers, FiChevronDown, FiChevronUp } from 'react-icons/fi'
@@ -56,10 +56,81 @@ export default function StatsPage() {
   const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null)
   const [quizStats, setQuizStats] = useState<QuizStats | null>(null)
   const [participantStats, setParticipantStats] = useState<ParticipantStat[]>([])
-  const [questionStats, setQuestionStats] = useState<QuestionStat[]>([])
-  const [expandedParticipants, setExpandedParticipants] = useState<{[key: string]: boolean}>({})
-  const [expandedQuestions, setExpandedQuestions] = useState<{[key: string]: boolean}>({})
+  const [questionStats, /* unused setter removed */] = useState<QuestionStat[]>([])
+  const [expandedParticipants, /* unused setter removed */] = useState<{ [key: string]: boolean }>({})
+  const [expandedQuestions, /* unused setter removed */] = useState<{ [key: string]: boolean }>({})
   const [activeTab, setActiveTab] = useState<'overview' | 'participants' | 'questions'>('overview')
+
+  // Wrap fetchQuizDetails in useCallback and define it before useEffect
+  const fetchQuizDetails = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('quizzes')
+        .select('*')
+        .eq('id', selectedQuizId)
+        .single();
+      
+      if (error) throw error;
+      
+      setQuizStats(data); // Or setQuizDetails if you have a separate state
+    } catch (err) {
+      console.error('Error fetching quiz details:', err);
+      // setError('Failed to load quiz details'); // Uncomment if you have setError
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedQuizId]);
+
+  // Wrap fetchParticipantsAndAnswers in useCallback and define it before useEffect
+  const fetchParticipantsAndAnswers = useCallback(async () => {
+    if (!selectedQuizId) return
+
+    try {
+      setLoading(true)
+      
+      // Get participants
+      const { data: participants, error: participantsError } = await supabase
+        .from('participants')
+        .select('*')
+        .eq('quiz_id', selectedQuizId)
+      
+      if (participantsError) throw participantsError
+      
+      // Get answers
+      const { data: answers, error: answersError } = await supabase
+        .from('participant_answers')
+        .select('*')
+        .eq('quiz_id', selectedQuizId)
+      
+      if (answersError) throw answersError
+      
+      // Calculate participant stats
+      const participantStatsData: ParticipantStat[] = participants?.map(p => {
+        const participantAnswers = answers?.filter(a => a.participant_id === p.id) || []
+        const correctAnswers = participantAnswers.filter(a => {
+          const question = questions?.find(q => q.id === a.question_id)
+          return question && a.selected_option === question.correct
+        })
+        
+        return {
+          id: p.id,
+          name: p.name,
+          avatar_emoji: p.avatar_emoji || p.avatar || '👤',
+          answeredCount: participantAnswers.length,
+          correctCount: correctAnswers.length,
+          responseRate: questionCount > 0 ? (participantAnswers.length / questionCount) * 100 : 0
+        }
+      }) || []
+      
+      setParticipantStats(participantStatsData)
+      
+    } catch (error) {
+      console.error('Error fetching participants and answers:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedQuizId]);
 
   // Fetch all quizzes
   useEffect(() => {
@@ -91,122 +162,30 @@ export default function StatsPage() {
 
   // Fetch stats for the selected quiz
   useEffect(() => {
-    if (!selectedQuizId) return
-    
-    const fetchQuizStats = async () => {
-      try {
-        setLoading(true)
-        
-        // Get quiz questions
-        const { data: questions, error: questionsError } = await supabase
-          .from('questions')
-          .select('*')
-          .eq('quiz_id', selectedQuizId)
-        
-        if (questionsError) throw questionsError
-        
-        // Get participants
-        const { data: participants, error: participantsError } = await supabase
-          .from('participants')
-          .select('*')
-          .eq('quiz_id', selectedQuizId)
-        
-        if (participantsError) throw participantsError
-        
-        // Get answers
-        const { data: answers, error: answersError } = await supabase
-          .from('participant_answers')
-          .select('*')
-          .eq('quiz_id', selectedQuizId)
-        
-        if (answersError) throw answersError
-        
-        // Calculate stats
-        const questionCount = questions?.length || 0
-        const participantCount = participants?.length || 0
-        const totalAnswers = answers?.length || 0
-        const maxPossibleAnswers = questionCount * participantCount
-        const responseRate = maxPossibleAnswers > 0 ? (totalAnswers / maxPossibleAnswers) * 100 : 0
-        
-        setQuizStats({
-          questionCount,
-          participantCount,
-          totalAnswers,
-          responseRate
-        })
-        
-        // Calculate participant stats
-        const participantStatsData: ParticipantStat[] = participants?.map(p => {
-          const participantAnswers = answers?.filter(a => a.participant_id === p.id) || []
-          const correctAnswers = participantAnswers.filter(a => {
-            const question = questions?.find(q => q.id === a.question_id)
-            return question && a.selected_option === question.correct
-          })
-          
-          return {
-            id: p.id,
-            name: p.name,
-            avatar_emoji: p.avatar_emoji || p.avatar || '👤',
-            answeredCount: participantAnswers.length,
-            correctCount: correctAnswers.length,
-            responseRate: questionCount > 0 ? (participantAnswers.length / questionCount) * 100 : 0
-          }
-        }) || []
-        
-        setParticipantStats(participantStatsData)
-        
-        // Calculate question stats
-        const questionStatsData: QuestionStat[] = questions?.map(q => {
-          const questionAnswers = answers?.filter(a => a.question_id === q.id) || []
-          const correctAnswers = questionAnswers.filter(a => a.selected_option === q.correct)
-          
-          const participantResponses = questionAnswers.map(a => {
-            const participant = participants?.find(p => p.id === a.participant_id)
-            return {
-              participantId: a.participant_id,
-              participantName: participant?.name || 'Unknown',
-              avatar: participant?.avatar_emoji || participant?.avatar || '👤',
-              selectedOption: a.selected_option,
-              isCorrect: a.selected_option === q.correct
-            }
-          })
-          
-          return {
-            id: q.id,
-            title: q.title,
-            options: q.options || [],
-            correct: q.correct,
-            responseCount: questionAnswers.length,
-            correctCount: correctAnswers.length,
-            participantResponses
-          }
-        }) || []
-        
-        setQuestionStats(questionStatsData)
-        
-      } catch (error) {
-        console.error('Error fetching quiz stats:', error)
-      } finally {
-        setLoading(false)
-      }
+    if (selectedQuizId) {
+      fetchQuizDetails();
+      fetchParticipantsAndAnswers();
     }
-    
-    fetchQuizStats()
-  }, [selectedQuizId])
+  }, [selectedQuizId, fetchQuizDetails, fetchParticipantsAndAnswers]);
 
-  const toggleParticipantExpand = (participantId: string) => {
-    setExpandedParticipants(prev => ({
-      ...prev,
-      [participantId]: !prev[participantId]
-    }))
-  }
-
-  const toggleQuestionExpand = (questionId: string) => {
-    setExpandedQuestions(prev => ({
-      ...prev,
-      [questionId]: !prev[questionId]
-    }))
-  }
+  // Real-time subscription to participant answers
+  useEffect(() => {
+    if (!selectedQuizId) return;
+    const answersChannel = supabase
+      .channel('participant-answers-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'participant_answers',
+        filter: `quiz_id=eq.${selectedQuizId}`,
+      }, () => {
+        fetchParticipantsAndAnswers();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(answersChannel);
+    };
+  }, [selectedQuizId, fetchParticipantsAndAnswers]);
 
   // Helper to format percentage
   const formatPercentage = (value: number) => {

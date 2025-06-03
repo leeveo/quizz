@@ -98,7 +98,21 @@ export default function QuizPreviewPage() {
   // Add viewMode state at the top level with other states
   const [viewMode, setViewMode] = useState<'grid' | 'cloud'>('grid');
   
-  // Fixed toggleFullscreen function using proper types
+  // Update interface to properly define vendor-specific methods
+  interface HTMLElementWithFullscreen extends HTMLElement {
+    mozRequestFullscreen?: () => Promise<void>;
+    webkitRequestFullscreen?: () => Promise<void>;
+    msRequestFullscreen?: () => Promise<void>;
+  }
+
+  // Keep the Document version for document methods
+  interface DocumentWithBrowserFeatures extends Document {
+    mozCancelFullScreen?: () => Promise<void>;
+    webkitExitFullscreen?: () => Promise<void>;
+    msExitFullscreen?: () => Promise<void>;
+  }
+
+  // Fix the toggleFullscreen function
   const toggleFullscreen = () => {
     const newFullscreenState = !isFullscreen;
     setIsFullscreen(newFullscreenState);
@@ -126,14 +140,20 @@ export default function QuizPreviewPage() {
         }
         
         // Then try to use the browser's fullscreen API as a backup
+        // Use proper interface for browser-specific methods
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen();
-        } else if ((document.documentElement as HTMLElement).mozRequestFullScreen) {
-          (document.documentElement as HTMLElement).mozRequestFullScreen();
-        } else if ((document.documentElement as HTMLElement).webkitRequestFullscreen) {
-          (document.documentElement as HTMLElement).webkitRequestFullscreen();
-        } else if ((document.documentElement as HTMLElement).msRequestFullscreen) {
-          (document.documentElement as HTMLElement).msRequestFullscreen();
+        } else {
+          // Use the correct type casting with the specific interface
+          const docEl = document.documentElement as HTMLElementWithFullscreen;
+          
+          if (docEl.mozRequestFullscreen) {
+            docEl.mozRequestFullscreen();
+          } else if (docEl.webkitRequestFullscreen) {
+            docEl.webkitRequestFullscreen();
+          } else if (docEl.msRequestFullscreen) {
+            docEl.msRequestFullscreen();
+          }
         }
       } catch (err) {
         console.error("Error entering fullscreen:", err);
@@ -163,12 +183,17 @@ export default function QuizPreviewPage() {
         // Exit browser's fullscreen mode
         if (document.exitFullscreen) {
           document.exitFullscreen();
-        } else if ((document as Document).mozCancelFullScreen) {
-          (document as Document).mozCancelFullScreen();
-        } else if ((document as Document).webkitExitFullscreen) {
-          (document as Document).webkitExitFullscreen();
-        } else if ((document as Document).msExitFullscreen) {
-          (document as Document).msExitFullscreen();
+        } else {
+          // Use the proper casting for document
+          const doc = document as DocumentWithBrowserFeatures;
+          
+          if (doc.mozCancelFullScreen) {
+            doc.mozCancelFullScreen();
+          } else if (doc.webkitExitFullscreen) {
+            doc.webkitExitFullscreen();
+          } else if (doc.msExitFullscreen) {
+            doc.msExitFullscreen();
+          }
         }
       } catch (err) {
         console.error("Error exiting fullscreen:", err);
@@ -182,6 +207,90 @@ export default function QuizPreviewPage() {
       background: 'linear-gradient(to bottom right, #4f46e5, #9333ea)'
     };
   };
+
+  // Move fetchParticipants function definition before the useEffect that depends on it
+  // Fetch participants with improved error handling - wrap in useCallback to use in dependency array
+  const fetchParticipants = useCallback(async () => {
+    try {
+      console.log('Fetching participants for quiz ID:', quizId);
+      
+      // First try with minimal set of fields that should always exist
+      try {
+        const { data, error } = await supabase
+          .from('participants')
+          .select('id, name, connected_at')
+          .eq('quiz_id', quizId);
+        
+        if (error) {
+          // If column error, throw to trigger fallback
+          if (error.code === '42703') {
+            throw new Error('Column error - trying alternative approach');
+          }
+          console.error('Error fetching participants:', error);
+          return;
+        }
+        
+        console.log('Participants data received:', data);
+        
+        // Process participants to ensure avatar_emoji exists
+        const processedData = data?.map((p: Participant) => ({
+          ...p,
+          avatar_emoji: p.avatar_emoji || p.avatar || '👤' // Use fallbacks if needed
+        })) || [];
+        
+        setParticipants(processedData);
+      } catch (err) {
+        console.warn('First participant fetch approach failed, trying fallback...', err);
+        
+        // Try alternative approach using REST API instead of client
+        try {
+          console.log('Using direct REST API approach for participants');
+          const apiUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/participants`;
+          console.log('Participants endpoint:', apiUrl);
+          
+          const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''}`,
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Fallback fetch failed: ${response.status} - ${errorText}`);
+          }
+          
+          const allParticipants = await response.json();
+          console.log('All participants fetched via REST:', allParticipants?.length || 0);
+          
+          // Filter locally for the current quiz if needed
+          // or just use all participants as a last resort
+          let relevantParticipants = allParticipants;
+          if (quizId && allParticipants.some((p: Participant) => p.quiz_id)) {
+            relevantParticipants = allParticipants.filter((p: Participant) => p.quiz_id === quizId);
+          }
+          
+          // Process participants to ensure avatar_emoji exists
+          const processedData = relevantParticipants?.map((p: Participant) => ({
+            ...p,
+            avatar_emoji: p.avatar_emoji || p.avatar || '👤' // Use fallbacks if needed
+          })) || [];
+          
+          setParticipants(processedData);
+        } catch (finalErr) {
+          console.error('All participant fetch approaches failed:', finalErr);
+          // Set empty array as fallback to prevent UI issues
+          setParticipants([]);
+        }
+      }
+    } catch (err) {
+      console.error('Error in fetchParticipants:', err);
+      // Set empty array as fallback
+      setParticipants([]);
+    }
+  }, [quizId]); // Add quizId dependency
 
   // Fetch quiz data with improved error handling
   useEffect(() => {
@@ -368,7 +477,7 @@ export default function QuizPreviewPage() {
       
       return () => clearInterval(intervalId);
     }
-  }, [quizId, router, fetchParticipants]) // Add fetchParticipants to dependency array
+  }, [quizId, router, fetchParticipants]) // Now fetchParticipants is defined before being used
   
   // Subscribe to participants joining
   useEffect(() => {
@@ -398,15 +507,14 @@ export default function QuizPreviewPage() {
   
   // Add fetchParticipants to dependency array in this useEffect
   useEffect(() => {
-    if (data.active) {
+    if (quiz && quiz.active) {
       setQuizLaunched(true);
       fetchParticipants();
     }
-    
-    if (data.quiz_started) {
+    if (quiz && quiz.quiz_started) {
       setQuizStarted(true);
     }
-  }, [quizId, fetchParticipants]); // Add fetchParticipants here
+  }, [quiz, fetchParticipants]);
 
   // Subscribe to participant answers
   useEffect(() => {
@@ -435,89 +543,6 @@ export default function QuizPreviewPage() {
       supabase.removeChannel(answersChannel)
     }
   }, [quizId, quizStarted, questions, currentQuestionIndex, fetchResponses, fetchParticipantResponses])
-
-  // Fetch participants with improved error handling - wrap in useCallback to use in dependency array
-  const fetchParticipants = useCallback(async () => {
-    try {
-      console.log('Fetching participants for quiz ID:', quizId);
-      
-      // First try with minimal set of fields that should always exist
-      try {
-        const { data, error } = await supabase
-          .from('participants')
-          .select('id, name, connected_at')
-          .eq('quiz_id', quizId);
-        
-        if (error) {
-          // If column error, throw to trigger fallback
-          if (error.code === '42703') {
-            throw new Error('Column error - trying alternative approach');
-          }
-          console.error('Error fetching participants:', error);
-          return;
-        }
-        
-        console.log('Participants data received:', data);
-        
-        // Process participants to ensure avatar_emoji exists
-        const processedData = data?.map((p: Participant) => ({
-          ...p,
-          avatar_emoji: p.avatar_emoji || p.avatar || '👤' // Use fallbacks if needed
-        })) || [];
-        
-        setParticipants(processedData);
-      } catch (err) {
-        console.warn('First participant fetch approach failed, trying fallback...', err);
-        
-        // Try alternative approach using REST API instead of client
-        try {
-          console.log('Using direct REST API approach for participants');
-          const apiUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/participants`;
-          console.log('Participants endpoint:', apiUrl);
-          
-          const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''}`,
-              'Content-Type': 'application/json',
-            }
-          });
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Fallback fetch failed: ${response.status} - ${errorText}`);
-          }
-          
-          const allParticipants = await response.json();
-          console.log('All participants fetched via REST:', allParticipants?.length || 0);
-          
-          // Filter locally for the current quiz if needed
-          // or just use all participants as a last resort
-          let relevantParticipants = allParticipants;
-          if (quizId && allParticipants.some((p: Participant) => p.quiz_id)) {
-            relevantParticipants = allParticipants.filter((p: Participant) => p.quiz_id === quizId);
-          }
-          
-          // Process participants to ensure avatar_emoji exists
-          const processedData = relevantParticipants?.map((p: Participant) => ({
-            ...p,
-            avatar_emoji: p.avatar_emoji || p.avatar || '👤' // Use fallbacks if needed
-          })) || [];
-          
-          setParticipants(processedData);
-        } catch (finalErr) {
-          console.error('All participant fetch approaches failed:', finalErr);
-          // Set empty array as fallback to prevent UI issues
-          setParticipants([]);
-        }
-      }
-    } catch (err) {
-      console.error('Error in fetchParticipants:', err);
-      // Set empty array as fallback
-      setParticipants([]);
-    }
-  }, [quizId]); // Add quizId dependency
 
   // Fonction pour récupérer les réponses détaillées par participant - with improved error handling
   const fetchParticipantResponses = useCallback(async (questionId: string) => {
@@ -1165,7 +1190,6 @@ export default function QuizPreviewPage() {
                   </button>
                 </div>
               </div>
-              
 
               {participants.length === 0 ? (
                 <div className="bg-gray-50 rounded-lg p-8 text-center">

@@ -406,7 +406,7 @@ export const resetParticipantAnswers = clearParticipantAnswers;
 /**
  * Check database schema and report missing columns
  */
-// Replace 'any' with proper types
+// Replace 'any' with proper error and response types
 export async function checkDatabaseSchema(
   table: string,
   requiredColumns: string[]
@@ -418,9 +418,7 @@ export async function checkDatabaseSchema(
   }
 }
 
-/**
- * Create missing columns in the database table
- */
+// Use proper return type instead of any
 export async function createMissingColumns(
   table: string,
   missingColumns: string[],
@@ -433,12 +431,21 @@ export async function createMissingColumns(
   }
 }
 
-/**
- * Get the currently active question for a quiz
- */
+// Fix any for the database response type
+export async function checkIfTableExists(
+  tableName: string
+): Promise<{ exists: boolean; error?: Error | null }> {
+  try {
+    // ...existing code...
+  } catch (err: unknown) {
+    return { exists: false, error: err instanceof Error ? err : new Error('Unknown error') };
+  }
+}
+
+// Fix unused error variable in line 77
 export async function getActiveQuestion(quizId: string) {
   try {
-    const { data } = await supabase  // Remove 'error' from destructuring
+    const { data } = await supabase // Remove error from destructuring
       .from('active_questions')
       .select('*')
       .eq('quiz_id', quizId)

@@ -773,36 +773,30 @@ export default function QuizPreviewPage() {
       setStageTimeRemaining(getStageTime('results'));
       if (questions[currentQuestionIndex]) {
         updateActiveQuestionStage(questions[currentQuestionIndex].id, 'results');
-      }
-      if (questions[currentQuestionIndex]) {
+        fetchResponses(questions[currentQuestionIndex].id);
         fetchParticipantResponses(questions[currentQuestionIndex].id);
       }
     } else if (quizStage === 'results') {
       setQuizStage('next');
       setTimeout(() => {
-        // Avancer à la question suivante côté admin ET côté client
         if (currentQuestionIndex < questions.length - 1) {
-          setCurrentQuestionIndex((prev) => {
-            const newIndex = prev + 1;
-            updateCurrentQuestionIndex(newIndex); // Synchronise côté client
-            return newIndex;
-          });
+          const newIndex = currentQuestionIndex + 1;
+          setCurrentQuestionIndex(newIndex);
+          updateCurrentQuestionIndex(newIndex); // Synchronise côté client
           setQuizStage('question');
           setStageTimeRemaining(getStageTime('question'));
         }
       }, 500);
     } else if (quizStage === 'next') {
       if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex((prev) => {
-          const newIndex = prev + 1;
-          updateCurrentQuestionIndex(newIndex); // Synchronise côté client
-          return newIndex;
-        });
+        const newIndex = currentQuestionIndex + 1;
+        setCurrentQuestionIndex(newIndex);
+        updateCurrentQuestionIndex(newIndex); // Synchronise côté client
         setQuizStage('question');
         setStageTimeRemaining(getStageTime('question'));
       }
     }
-  }, [quizStage, currentQuestionIndex, questions, updateActiveQuestionStage, getStageTime, fetchParticipantResponses]);
+  }, [quizStage, currentQuestionIndex, questions, updateActiveQuestionStage, getStageTime, fetchResponses, fetchParticipantResponses]);
 
   // Handle automatic question changes when playing
   useEffect(() => {

@@ -93,10 +93,17 @@ export default function QuizLive() {
       })
   }, [quizId, waiting, currentIndex])
 
+  // Correction : timer synchronisé sur chaque nouvelle question
+  useEffect(() => {
+    setTimer(20); // reset timer à chaque nouvelle question
+    setSelected(null); // reset sélection
+  }, [question]);
+
+  // Correction : timer automatique, passage à la question suivante côté client (pour UX, mais la synchro reste côté admin)
   useEffect(() => {
     if (timer > 0) {
-      const interval = setInterval(() => setTimer((t) => t - 1), 1000)
-      return () => clearInterval(interval)
+      const interval = setInterval(() => setTimer((t) => t - 1), 1000);
+      return () => clearInterval(interval);
     }
   }, [timer])
 

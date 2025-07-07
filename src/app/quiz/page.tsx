@@ -112,7 +112,7 @@ export default function QuizLive() {
   useEffect(() => {
     if (!quizId) return
     // Vérifier si déjà inscrit (par exemple via localStorage)
-    let pid = localStorage.getItem(`participant_id_${quizId}`)
+    const pid = localStorage.getItem(`participant_id_${quizId}`)
     if (pid) {
       setParticipantId(Number(pid))
       return

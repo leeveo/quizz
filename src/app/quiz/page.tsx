@@ -15,7 +15,6 @@ export default function QuizLive() {
   const [question, setQuestion] = useState<Question | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const [timer, setTimer] = useState<number>(20)
-  const [quizStarted, setQuizStarted] = useState(false)
   const [waiting, setWaiting] = useState(true)
   const quizId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
 
@@ -64,7 +63,6 @@ export default function QuizLive() {
         filter: `id=eq.${quizId}`
       }, (payload) => {
         if (payload.new.quiz_started) {
-          setQuizStarted(true)
           setWaiting(false)
         }
       })
@@ -73,7 +71,6 @@ export default function QuizLive() {
     // Vérification initiale (au cas où le quiz est déjà démarré)
     supabase.from('quizzes').select('quiz_started').eq('id', quizId).single().then(({ data }) => {
       if (data?.quiz_started) {
-        setQuizStarted(true)
         setWaiting(false)
       } else {
         setWaiting(true)

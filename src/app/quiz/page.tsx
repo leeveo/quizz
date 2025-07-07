@@ -16,6 +16,7 @@ export default function QuizLive() {
   const [selected, setSelected] = useState<number | null>(null)
   const [timer, setTimer] = useState<number>(20)
   const [waiting, setWaiting] = useState(true)
+  const [currentIndex, setCurrentIndex] = useState<number>(0)
   const quizId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
 
   useEffect(() => {
@@ -64,41 +65,47 @@ export default function QuizLive() {
     }
   }, [quizId])
 
-  // Ajout d'un effet pour charger la première question quand le quiz démarre
+  // S'abonner à l'index de la question courante (current_question_index)
+  useEffect(() => {
+    if (!quizId) return
+    const channel = supabase
+      .channel('quiz-current-question')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'quizzes',
+        filter: `id=eq.${quizId}`
+      }, (payload) => {
+        if (typeof payload.new.current_question_index === 'number') {
+          setCurrentIndex(payload.new.current_question_index)
+        }
+      })
+      .subscribe()
+
+    // Récupération initiale de l'index courant
+    supabase.from('quizzes').select('current_question_index').eq('id', quizId).single().then(({ data }) => {
+      if (typeof data?.current_question_index === 'number') {
+        setCurrentIndex(data.current_question_index)
+      }
+    })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [quizId])
+
+  // Charger la question courante à chaque changement d'index
   useEffect(() => {
     if (!quizId || waiting) return
-    // Charger la première question du quiz
     supabase
       .from('questions')
       .select('*')
       .eq('quiz_id', quizId)
       .order('order_index', { ascending: true })
-      .limit(1)
-      .single()
       .then(({ data }) => {
-        if (data) setQuestion(data as Question)
+        if (data && data.length > currentIndex) setQuestion(data[currentIndex])
       })
-  }, [quizId, waiting])
-
-  useEffect(() => {
-    if (!quizId) return
-    const channel = supabase
-      .channel('quiz-questions')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'questions',
-        filter: `quiz_id=eq.${quizId}`
-      }, (payload) => {
-        setQuestion(payload.new as Question)
-        setTimer(20)
-        setSelected(null)
-      })
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [quizId])
+  }, [quizId, waiting, currentIndex])
 
   useEffect(() => {
     if (timer > 0) {

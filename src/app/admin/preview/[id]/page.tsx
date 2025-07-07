@@ -668,6 +668,15 @@ export default function QuizPreviewPage() {
     }
   }, [quizId, quizStarted, questions, currentQuestionIndex, fetchResponses, fetchParticipantResponses])
 
+  // Met à jour l'index de la question courante côté admin à chaque changement de question
+  const updateCurrentQuestionIndex = async (newIndex: number) => {
+    if (!quizId) return;
+    await supabase
+      .from('quizzes')
+      .update({ current_question_index: newIndex })
+      .eq('id', quizId);
+  };
+
   // Utility: finishQuiz function (define if missing)
   // const finishQuiz = useCallback(() => { ... }, [...]); // Remove unused finishQuiz
 
@@ -762,7 +771,6 @@ export default function QuizPreviewPage() {
     } else if (quizStage === 'answer') {
       setQuizStage('results');
       setStageTimeRemaining(getStageTime('results'));
-      // Optionally show detailed responses here if needed
       if (questions[currentQuestionIndex]) {
         updateActiveQuestionStage(questions[currentQuestionIndex].id, 'results');
       }
@@ -772,17 +780,27 @@ export default function QuizPreviewPage() {
     } else if (quizStage === 'results') {
       setQuizStage('next');
       setTimeout(() => {
-        // If you have a goToNextQuestion function, call it here
-        // goToNextQuestion();
-        setQuizStage('question');
-        setStageTimeRemaining(getStageTime('question'));
-        // Optionally reset detailed responses here if needed
+        // Avancer à la question suivante côté admin ET côté client
+        if (currentQuestionIndex < questions.length - 1) {
+          setCurrentQuestionIndex((prev) => {
+            const newIndex = prev + 1;
+            updateCurrentQuestionIndex(newIndex); // Synchronise côté client
+            return newIndex;
+          });
+          setQuizStage('question');
+          setStageTimeRemaining(getStageTime('question'));
+        }
       }, 500);
     } else if (quizStage === 'next') {
-      // goToNextQuestion();
-      setQuizStage('question');
-      setStageTimeRemaining(getStageTime('question'));
-      // Optionally reset detailed responses here if needed
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex((prev) => {
+          const newIndex = prev + 1;
+          updateCurrentQuestionIndex(newIndex); // Synchronise côté client
+          return newIndex;
+        });
+        setQuizStage('question');
+        setStageTimeRemaining(getStageTime('question'));
+      }
     }
   }, [quizStage, currentQuestionIndex, questions, updateActiveQuestionStage, getStageTime, fetchParticipantResponses]);
 

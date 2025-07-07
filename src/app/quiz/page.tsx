@@ -19,37 +19,19 @@ export default function QuizLive() {
   const quizId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
 
   useEffect(() => {
-    const channel = supabase
-      .channel('quiz-questions')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'questions' }, (payload) => {
-        // Cast payload.new to Question type to satisfy TypeScript
-        setQuestion(payload.new as Question)
-        setTimer(20)
-        setSelected(null)
+    if (!quizId || waiting) return
+    // Charger la première question du quiz
+    supabase
+      .from('questions')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('order_index', { ascending: true })
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) setQuestion(data as Question)
       })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (timer > 0) {
-      const interval = setInterval(() => setTimer((t) => t - 1), 1000)
-      return () => clearInterval(interval)
-    }
-  }, [timer])
-
-  const sendAnswer = async (choice: number) => {
-    setSelected(choice)
-    if (!question) return // Prevent error if question is null
-    await supabase.from('answers').insert({
-      participant_id: 1, // à remplacer dynamiquement
-      question_id: question.id,
-      selected: choice,
-    })
-  }
+  }, [quizId, waiting])
 
   useEffect(() => {
     if (!quizId) return
@@ -81,6 +63,59 @@ export default function QuizLive() {
       supabase.removeChannel(channel)
     }
   }, [quizId])
+
+  // Ajout d'un effet pour charger la première question quand le quiz démarre
+  useEffect(() => {
+    if (!quizId || waiting) return
+    // Charger la première question du quiz
+    supabase
+      .from('questions')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('order_index', { ascending: true })
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) setQuestion(data as Question)
+      })
+  }, [quizId, waiting])
+
+  useEffect(() => {
+    if (!quizId) return
+    const channel = supabase
+      .channel('quiz-questions')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'questions',
+        filter: `quiz_id=eq.${quizId}`
+      }, (payload) => {
+        setQuestion(payload.new as Question)
+        setTimer(20)
+        setSelected(null)
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [quizId])
+
+  useEffect(() => {
+    if (timer > 0) {
+      const interval = setInterval(() => setTimer((t) => t - 1), 1000)
+      return () => clearInterval(interval)
+    }
+  }, [timer])
+
+  const sendAnswer = async (choice: number) => {
+    setSelected(choice)
+    if (!question) return // Prevent error if question is null
+    await supabase.from('answers').insert({
+      participant_id: 1, // à remplacer dynamiquement
+      question_id: question.id,
+      selected: choice,
+    })
+  }
 
   if (waiting) return <p>En attente du lancement du quiz...</p>
   if (!question) return <p>En attente de la question...</p>

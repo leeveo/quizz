@@ -17,6 +17,7 @@ export default function QuizLive() {
   const [timer, setTimer] = useState<number>(20)
   const [waiting, setWaiting] = useState(true)
   const [currentIndex, setCurrentIndex] = useState<number>(0)
+  const [participantId, setParticipantId] = useState<number | null>(null)
   const quizId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
 
   useEffect(() => {
@@ -107,11 +108,35 @@ export default function QuizLive() {
     }
   }, [timer])
 
+  // Enregistrement du participant à l'arrivée sur la page
+  useEffect(() => {
+    if (!quizId) return
+    // Vérifier si déjà inscrit (par exemple via localStorage)
+    let pid = localStorage.getItem(`participant_id_${quizId}`)
+    if (pid) {
+      setParticipantId(Number(pid))
+      return
+    }
+    // Sinon, inscription dans la table participants
+    const name = prompt("Entrez votre nom pour rejoindre le quiz") || "Anonyme"
+    supabase
+      .from('participants')
+      .insert({ quiz_id: quizId, name })
+      .select('id')
+      .single()
+      .then(({ data }) => {
+        if (data?.id) {
+          setParticipantId(data.id)
+          localStorage.setItem(`participant_id_${quizId}`, data.id)
+        }
+      })
+  }, [quizId])
+
   const sendAnswer = async (choice: number) => {
     setSelected(choice)
-    if (!question) return // Prevent error if question is null
+    if (!question || !participantId) return // Prevent error if question is null or participant not registered
     await supabase.from('answers').insert({
-      participant_id: 1, // à remplacer dynamiquement
+      participant_id: participantId,
       question_id: question.id,
       selected: choice,
     })

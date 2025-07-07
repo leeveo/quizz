@@ -20,21 +20,6 @@ export default function QuizLive() {
   const quizId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null
 
   useEffect(() => {
-    if (!quizId || waiting) return
-    // Charger la première question du quiz
-    supabase
-      .from('questions')
-      .select('*')
-      .eq('quiz_id', quizId)
-      .order('order_index', { ascending: true })
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data) setQuestion(data as Question)
-      })
-  }, [quizId, waiting])
-
-  useEffect(() => {
     if (!quizId) return
     // S'abonner à la table quizzes pour détecter le démarrage
     const channel = supabase
@@ -104,6 +89,7 @@ export default function QuizLive() {
       .order('order_index', { ascending: true })
       .then(({ data }) => {
         if (data && data.length > currentIndex) setQuestion(data[currentIndex])
+        else setQuestion(null)
       })
   }, [quizId, waiting, currentIndex])
 

@@ -976,7 +976,7 @@ export default function QuizPreviewPage() {
         className={`min-h-screen flex flex-col items-center justify-center p-4 ${isFullscreen ? 'custom-fullscreen-mode' : ''}`}
         style={!isFullscreen ? getGradientStyle() : {}} // Use custom gradient when not fullscreen
       >
-     
+        {/* Exit button */}
         {!isFullscreen && (
           <button 
             onClick={exitPreview}
@@ -991,45 +991,7 @@ export default function QuizPreviewPage() {
           <h1 className="text-3xl font-bold text-indigo-800 mb-2">{quiz.title}</h1>
           <p className="text-gray-600 mb-6">{quiz.event_name} - {new Date(quiz.event_date).toLocaleDateString()}</p>
           
-          {/* Modern collapsible instructions panel - moved outside grid for full width */}
-          <details className="mb-6 bg-indigo-50/50 rounded-lg border border-indigo-100/70 overflow-hidden group">
-            <summary className="p-3 cursor-pointer font-medium text-indigo-700 flex items-center justify-between hover:bg-indigo-50 transition-colors">
-              <span className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-                Comment fonctionne ce quiz ?
-              </span>
-              <svg className="h-5 w-5 text-indigo-500 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </summary>
-            <div className="p-4 bg-white border-t border-indigo-100/70">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-left text-sm">
-                <div className="bg-indigo-50 p-3 rounded-lg flex flex-col items-center text-center">
-                  <span className="text-2xl mb-2">🎮</span>
-                  <p className="text-gray-700"><strong>Principe</strong><br />Répondez aux questions à choix multiple pour marquer des points</p>
-                </div>
-                <div className="bg-purple-50 p-3 rounded-lg flex flex-col items-center text-center">
-                  <span className="text-2xl mb-2">⏱️</span>
-                  <p className="text-gray-700"><strong>Temps limité</strong><br />Plus vous répondez vite, plus vous gagnez de points</p>
-                </div>
-                <div className="bg-blue-50 p-3 rounded-lg flex flex-col items-center text-center">
-                  <span className="text-2xl mb-2">📱</span>
-                  <p className="text-gray-700"><strong>Sur votre appareil</strong><br />Touchez l&apos;option que vous pensez correcte</p>
-                </div>
-                <div className="bg-green-50 p-3 rounded-lg flex flex-col items-center text-center">
-                  <span className="text-2xl mb-2">✅</span>
-                  <p className="text-gray-700"><strong>Résultats</strong><br />Voyez votre position par rapport aux autres</p>
-                </div>
-                <div className="bg-yellow-50 p-3 rounded-lg flex flex-col items-center text-center">
-                  <span className="text-2xl mb-2">🏆</span>
-                  <p className="text-gray-700"><strong>Classement</strong><br />Un podium des meilleurs joueurs sera affiché à la fin</p>
-                </div>
-              </div>
-            </div>
-          </details>
-          
+          {/* QR code and join link */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
               <h2 className="text-xl font-semibold mb-4">Scannez pour rejoindre</h2>
@@ -1053,6 +1015,7 @@ export default function QuizPreviewPage() {
               </div>
             </div>
             
+            {/* Participants list */}
             <div className="text-left">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Participants ({participants.length})</h2>
@@ -1093,7 +1056,6 @@ export default function QuizPreviewPage() {
                 <div>
                   <div className="bg-gray-50 rounded-lg p-4 max-h-80 overflow-y-auto">
                     {viewMode === 'grid' ? (
-                      // Grid view - Dynamic sizing based on participant count
                       <div 
                         className={`grid gap-1 ${
                           participants.length <= 20 ? 'grid-cols-3 sm:grid-cols-4' : 
@@ -1123,21 +1085,15 @@ export default function QuizPreviewPage() {
                         ))}
                       </div>
                     ) : (
-                      // Cloud view - Arrange participants in a more compact way
                       <div className="participant-cloud relative h-64 w-full">
                         {participants.map((participant, index) => {
-                          // Calculate position in cloud - spread evenly
                           const angle = (index / participants.length) * 2 * Math.PI;
-                          const radius = Math.min(30 + Math.random() * 30, 45); // Random distance from center
+                          const radius = Math.min(30 + Math.random() * 30, 45);
                           const leftPercent = 50 + Math.cos(angle) * radius;
                           const topPercent = 50 + Math.sin(angle) * radius;
-                          
-                          // Size based on participant count
                           const size = participants.length <= 50 ? 40 : 
                                       participants.length <= 100 ? 35 : 
                                       participants.length <= 200 ? 30 : 24;
-                          
-
                           return (
                             <div 
                               key={participant.id}
@@ -1169,7 +1125,7 @@ export default function QuizPreviewPage() {
                   
                   <div className="mt-6 bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                     <p className="text-indigo-700 font-medium">
-                       participant connecté
+                      {participants.length} participant{participants.length > 1 ? 's' : ''} connecté{participants.length > 1 ? 's' : ''}
                     </p>
                     <p className="text-sm text-indigo-600 mt-1">
                       Vous pouvez commencer le quiz quand vous êtes prêt
@@ -1407,6 +1363,50 @@ export default function QuizPreviewPage() {
                 </div>
               )
             })}
+          </div>
+        </div>
+        
+        {/* Responses details - show only if results are being shown */}
+        {showingResults && (
+          <div className="mt-8 w-full max-w-3xl mx-auto">
+            <h3 className="text-xl font-bold text-center mb-4">Réponses par participant</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {participantResponses.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Aucune réponse pour cette question
+                </div>
+              ) : (
+                participantResponses.map((response) => {
+                  const isCorrect = response.selected_option === currentQuestion.correct;
+                  return (
+                    <div 
+                      key={`${response.participant_id}-${response.answered_at.toString()}`} // Create a composite key
+                      className={`p-4 rounded-xl border-2 ${isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}
+                    >
+                      {/* Response details would go here */}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Participant responses info */}
+        {quizStarted && (
+          <div className="mt-6 bg-white/20 text-white px-6 py-3 rounded-full backdrop-blur-sm">
+            {responses.reduce((sum, r) => sum + r.count, 0)} / {participants.length} participants ont répondu
+          </div>
+        )}
+      </div>
+      
+      {/* Footer with instructions */}
+      <div className="p-4 text-center text-white/70 text-sm">
+        Cliquez n&apos;importe où pour {showControls ? 'masquer' : 'afficher'} les contrôles
+      </div>
+    </div>
+  )
+}
           </div>
         </div>
         

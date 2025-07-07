@@ -120,6 +120,7 @@ export default function QuizLive() {
   if (waiting) return <p>En attente du lancement du quiz...</p>
   if (!question) return <p>En attente de la question...</p>
 
+  // Affichage de la bonne réponse en vert côté participant
   return (
     <div className="p-4">
       <h2 className="text-xl">{question.title}</h2>
@@ -128,11 +129,14 @@ export default function QuizLive() {
         {question.options.map((opt: string, idx: number) => (
           <li key={idx}>
             <button
-              className={`p-2 border m-2 ${selected === idx ? 'bg-green-300' : ''}`}
+              className={`p-2 border m-2 ${selected === idx ? 'bg-green-300' : ''} ${selected !== null && idx === question.correct ? 'bg-green-200 border-green-600' : ''}`}
               onClick={() => sendAnswer(idx)}
               disabled={!!selected}
             >
               {opt}
+              {selected !== null && idx === question.correct && (
+                <span className="ml-2 text-green-700 font-bold">✔</span>
+              )}
             </button>
           </li>
         ))}

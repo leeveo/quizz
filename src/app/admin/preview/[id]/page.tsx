@@ -677,12 +677,25 @@ export default function QuizPreviewPage() {
   // Utility: exitPreview function (define if missing)
   const exitPreview = () => router.push('/dashboard');
 
-  // Utility: startQuiz function (define if missing)
+  // Utility: startQuiz function (corrigée pour synchronisation backend et clients)
   const startQuiz = async () => {
-    // Implement your start logic here, or leave empty if handled elsewhere
-    setQuizStarted(true);
-    setQuizStage('question');
-    setStageTimeRemaining(getStageTime('question'));
+    if (!quizId) return;
+    try {
+      // Met à jour le champ quiz_started dans la table quizzes
+      const { error } = await supabase
+        .from('quizzes')
+        .update({ quiz_started: true })
+        .eq('id', quizId);
+      if (error) {
+        console.error('Erreur lors du démarrage du quiz:', error);
+        alert("Erreur lors du démarrage du quiz. Veuillez réessayer.");
+        return;
+      }
+      // L'état local sera mis à jour automatiquement via l'abonnement Realtime
+    } catch (err) {
+      console.error('Erreur lors du démarrage du quiz:', err);
+      alert("Erreur lors du démarrage du quiz. Veuillez réessayer.");
+    }
   };
 
   // Utility: goToPrevQuestion function (define if missing)
